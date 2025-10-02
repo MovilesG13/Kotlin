@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "783109027463",
+    "project_id": "monify-1384d",
+    "storage_bucket": "monify-1384d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:783109027463:android:985919d2ce60530d3aea22",
+        "android_client_info": {
+          "package_name": "com.example.monify_kotlin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyALydwjF_feDUiUGJVUr4iDdzkUSIVJRys"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
