@@ -1,19 +1,25 @@
 package com.example.monify_kotlin.core.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.NavHostController
 import com.example.monify_kotlin.feature.home.ui.HomeScreen
 import com.example.monify_kotlin.feature.login.ui.LoginScreen
-
+import com.example.monify_kotlin.feature.login.ui.MainLoginScreen
+import com.example.monify_kotlin.feature.login.ui.SignUpScreen
 import com.example.monify_kotlin.feature.savings.ui.SavingsScreen
-import com.example.monify_kotlin.feature.transactions.ui.AddIncomeScreen
 import com.example.monify_kotlin.feature.transactions.ui.AddExpenseScreen
+import com.example.monify_kotlin.feature.transactions.ui.AddIncomeScreen
+import android.os.Build
+import androidx.compose.material3.Text
 
+import androidx.annotation.RequiresApi
 object Routes {
+    const val MAIN_LOGIN = "main_login"
     const val LOGIN = "login"
-    const val HOME  = "home"
+    const val SIGN_UP = "sign_up"
+    const val HOME = "home"
     const val SAVINGS = "savings"
     const val ADD_INCOME = "add_income"
     const val ADD_EXPENSE = "add_expense"
@@ -21,12 +27,38 @@ object Routes {
 
 @Composable
 fun AppNavGraph(navController: NavHostController) {
-    NavHost(navController, startDestination = Routes.LOGIN) {
-        composable(Routes.LOGIN) {
-            LoginScreen(
-                onLoginSuccess = { navController.navigate(Routes.HOME) { popUpTo(Routes.LOGIN) { inclusive = true } } }
+    NavHost(navController = navController, startDestination = Routes.MAIN_LOGIN) {
+
+        composable(Routes.MAIN_LOGIN) {
+            MainLoginScreen(
+                onLoginClicked = { navController.navigate(Routes.LOGIN) },
+                onSignInClicked = { navController.navigate(Routes.SIGN_UP) }
             )
         }
+
+        composable(Routes.LOGIN) {
+            LoginScreen(
+                onLoginSuccess = {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.MAIN_LOGIN) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+
+        composable(Routes.SIGN_UP) {
+            SignUpScreen(
+                navController = navController,
+                onSignUpSuccess = {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.MAIN_LOGIN) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+
         composable(Routes.HOME) {
             HomeScreen(
                 onGoSavings = { navController.navigate(Routes.SAVINGS) },
@@ -34,8 +66,26 @@ fun AppNavGraph(navController: NavHostController) {
                 onAddExpense = { navController.navigate(Routes.ADD_EXPENSE) }
             )
         }
-        composable(Routes.SAVINGS) { SavingsScreen(onBackHome = { navController.navigate(Routes.HOME) }) }
-        composable(Routes.ADD_INCOME) { AddIncomeScreen(onBack = { navController.popBackStack() }) }
-        composable(Routes.ADD_EXPENSE) { AddExpenseScreen(onBack = { navController.popBackStack() }) }
+
+        composable(Routes.SAVINGS) {
+            SavingsScreen(onBackHome = { navController.navigate(Routes.HOME) })
+        }
+        composable(Routes.ADD_INCOME) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                AddIncomeScreen(onBack = { navController.popBackStack() })
+            } else {
+                Text("Esta pantalla requiere Android O (API 26) o superior")
+            }
+        }
+
+        composable(Routes.ADD_EXPENSE) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                AddExpenseScreen(onBack = { navController.popBackStack() })
+            } else {
+                Text("Esta pantalla requiere Android O (API 26) o superior")
+            }
+        }
+
     }
 }
+
