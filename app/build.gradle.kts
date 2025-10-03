@@ -85,8 +85,15 @@ dependencies {
     implementation(libs.firebase.functions.ktx)
     implementation(libs.firebase.crashlytics.ktx)
     implementation(libs.firebase.messaging.ktx)
+    implementation("com.google.firebase:firebase-storage-ktx")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+
+    // Para Coil (cargar imágenes)
+    implementation("io.coil-kt:coil-compose:2.5.0")
+
+    // Para Accompanist Permissions
+    implementation("com.google.accompanist:accompanist-permissions:0.32.0")
 }
 
 

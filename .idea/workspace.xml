@@ -2,18 +2,31 @@
 <project version="4">
   <component name="AndroidLayouts">
     <shared>
-      <config />
+      <config>
+        <device id="_device_class_phone" />
+        <device id="wearos_rect" />
+      </config>
     </shared>
+    <layouts>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/xml/file_paths.xml">
+        <config>
+          <theme>@style/Theme.Monify</theme>
+        </config>
+      </layout>
+    </layouts>
   </component>
   <component name="AutoImportSettings">
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d76966a4-be6e-4442-b75d-f63f6fe83516" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/example/monify_kotlin/data/IncomeRepository.kt" afterDir="false" />
+    <list default="true" id="d76966a4-be6e-4442-b75d-f63f6fe83516" name="Changes" comment="income implementation">
+      <change afterPath="$PROJECT_DIR$/app/src/main/res/xml/file_paths.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/monify_kotlin/feature/transactions/ui/AddIncomeScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/monify_kotlin/feature/transactions/ui/AddIncomeScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/monify_kotlin/feature/transactions/ui/AddIncomeViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/monify_kotlin/feature/transactions/ui/AddIncomeViewModel.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/app/build.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/monify_kotlin/data/ExpenseRepository.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/monify_kotlin/data/ExpenseRepository.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/monify_kotlin/feature/transactions/ui/AddExpenseScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/monify_kotlin/feature/transactions/ui/AddExpenseScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/monify_kotlin/feature/transactions/ui/AddExpensesViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/monify_kotlin/feature/transactions/ui/AddExpensesViewModel.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/functions/src/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/functions/src/index.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -52,6 +65,7 @@
       <list>
         <option value="Kotlin Class" />
         <option value="Kotlin File" />
+        <option value="resourceFile" />
       </list>
     </option>
   </component>
@@ -105,8 +119,8 @@
     "cf.first.check.clang-format": "false",
     "cidr.known.project.marker": "true",
     "com.google.services.firebase.aqiPopupShown": "true",
-    "git-widget-placeholder": "income-implementation",
-    "last_opened_file_path": "C:/Users/sebas/AndroidStudioProjects/Kotlin/app/src/main/res/drawable",
+    "git-widget-placeholder": "camera-receipt-implementation",
+    "last_opened_file_path": "C:/Users/sebas/AndroidStudioProjects/Kotlin/app/src/main/res/xml",
     "project.structure.last.edited": "Modules",
     "project.structure.proportion": "0.17",
     "project.structure.side.proportion": "0.2",
@@ -119,6 +133,7 @@
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\sebas\AndroidStudioProjects\Kotlin\app\src\main\res\xml" />
       <recent name="C:\Users\sebas\AndroidStudioProjects\Kotlin\app\src\main\res\drawable" />
       <recent name="C:\Users\sebas\AndroidStudioProjects\Kotlin\app\src\main\res\font" />
     </key>
@@ -290,7 +305,15 @@
       <option name="project" value="LOCAL" />
       <updated>1759514001373</updated>
     </task>
-    <option name="localTasksCounter" value="10" />
+    <task id="LOCAL-00010" summary="income implementation">
+      <option name="closed" value="true" />
+      <created>1759517318745</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1759517318745</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -364,19 +387,20 @@
     <MESSAGE value="firebase index config" />
     <MESSAGE value="auth funcionando" />
     <MESSAGE value="expenses + expenses report by categories" />
-    <option name="LAST_COMMIT_MESSAGE" value="expenses + expenses report by categories" />
+    <MESSAGE value="income implementation" />
+    <option name="LAST_COMMIT_MESSAGE" value="income implementation" />
   </component>
   <component name="play_dynamic_filters_status">
     <option name="appIdToCheckInfo">
       <map>
         <entry key="com.example.monify_kotlin">
           <value>
-            <CheckInfo lastCheckTimestamp="1758505003609" />
+            <CheckInfo lastCheckTimestamp="1759520912400" />
           </value>
         </entry>
         <entry key="com.example.monify_kotlin.test">
           <value>
-            <CheckInfo lastCheckTimestamp="1758505003607" />
+            <CheckInfo lastCheckTimestamp="1759520912398" />
           </value>
         </entry>
       </map>

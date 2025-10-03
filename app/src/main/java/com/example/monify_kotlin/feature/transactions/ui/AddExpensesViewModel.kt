@@ -1,5 +1,6 @@
 package com.example.monify_kotlin.feature.transactions.ui
 
+import android.net.Uri
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.getValue
@@ -18,6 +19,9 @@ data class AddExpenseUiState(
     val category: String = "Food",
     val notes: String = "",
     val date: LocalDate? = null,
+    val receiptImageUri: Uri? = null,
+    val receiptImageUrl: String? = null,
+    val isUploadingImage: Boolean = false,
     val isLoading: Boolean = false,
     val error: String? = null,
     val success: Boolean = false,
@@ -54,6 +58,37 @@ class AddExpenseViewModel(
         uiState = uiState.copy(date = value, error = null)
     }
 
+    fun updateReceiptImage(uri: Uri?) {
+        uiState = uiState.copy(receiptImageUri = uri)
+    }
+
+    fun uploadReceiptImage(imageUri: Uri) {
+        uiState = uiState.copy(isUploadingImage = true, error = null)
+
+        viewModelScope.launch {
+            try {
+                val imageUrl = repository.uploadReceiptImage(imageUri)
+                uiState = uiState.copy(
+                    isUploadingImage = false,
+                    receiptImageUrl = imageUrl,
+                    receiptImageUri = imageUri
+                )
+            } catch (e: Exception) {
+                uiState = uiState.copy(
+                    isUploadingImage = false,
+                    error = "Failed to upload image: ${e.message}"
+                )
+            }
+        }
+    }
+
+    fun removeReceiptImage() {
+        uiState = uiState.copy(
+            receiptImageUri = null,
+            receiptImageUrl = null
+        )
+    }
+
     @RequiresApi(Build.VERSION_CODES.O)
     fun saveExpense() {
         // Validar amount
@@ -66,6 +101,12 @@ class AddExpenseViewModel(
         // Validar fecha
         if (uiState.date == null) {
             uiState = uiState.copy(error = "Please select a date")
+            return
+        }
+
+        // Si hay una imagen pero no se ha subido, subirla primero
+        if (uiState.receiptImageUri != null && uiState.receiptImageUrl == null) {
+            uiState = uiState.copy(error = "Please wait while the receipt image is uploading")
             return
         }
 
@@ -83,7 +124,8 @@ class AddExpenseViewModel(
                     categoryId = uiState.category.lowercase(),
                     description = if (uiState.description.isNotBlank()) uiState.description else null,
                     note = if (uiState.notes.isNotBlank()) uiState.notes else null,
-                    date = dateString
+                    date = dateString,
+                    receiptImageUrl = uiState.receiptImageUrl
                 )
 
                 uiState = uiState.copy(

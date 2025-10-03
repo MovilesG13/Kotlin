@@ -87,11 +87,10 @@ export const createExpense = onCall(async (req) => {
   const uid = req.auth?.uid;
   if (!uid) throw new Error("UNAUTHENTICATED");
 
-  const { amount, currency, categoryId, note, description, date } = req.data || {};
+  const { amount, currency, categoryId, note, description, date, receiptImageUrl } = req.data || {};
 
   if (!(amount > 0) || !currency || !categoryId) throw new Error("INVALID_ARGS");
 
-  // Si se proporciona una fecha específica, usarla; de lo contrario usar ahora
   const timestamp = date
     ? Timestamp.fromDate(new Date(date))
     : Timestamp.now();
@@ -103,6 +102,7 @@ export const createExpense = onCall(async (req) => {
       categoryId,
       note: note ?? null,
       description: description ?? null,
+      receiptImageUrl: receiptImageUrl ?? null,
       ts: timestamp
     });
 

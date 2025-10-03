@@ -1,11 +1,38 @@
 package com.example.monify_kotlin.data
 
+import android.net.Uri
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.functions.FirebaseFunctions
+import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.tasks.await
+import java.util.UUID
 
 class ExpenseRepository(
-    private val functions: FirebaseFunctions = FirebaseFunctions.getInstance()
+    private val functions: FirebaseFunctions = FirebaseFunctions.getInstance(),
+    private val storage: FirebaseStorage = FirebaseStorage.getInstance(),
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 ) {
+
+    /**
+     * Sube una imagen de recibo a Firebase Storage
+     * @param imageUri URI de la imagen capturada
+     * @return URL pública de la imagen subida
+     */
+    suspend fun uploadReceiptImage(imageUri: Uri): String {
+        val uid = auth.currentUser?.uid ?: throw IllegalStateException("User not authenticated")
+        val fileName = "receipt_${UUID.randomUUID()}.jpg"
+        val storageRef = storage.reference
+            .child("users")
+            .child(uid)
+            .child("receipts")
+            .child(fileName)
+
+        // Subir la imagen
+        storageRef.putFile(imageUri).await()
+
+        // Obtener la URL de descarga
+        return storageRef.downloadUrl.await().toString()
+    }
 
     /**
      * Crea un nuevo gasto en Firebase
@@ -15,6 +42,7 @@ class ExpenseRepository(
      * @param description Descripción opcional del gasto
      * @param note Notas adicionales opcionales
      * @param date Fecha del gasto en formato ISO 8601 (ej: "2025-10-03T10:30:00")
+     * @param receiptImageUrl URL de la imagen del recibo (opcional)
      */
     suspend fun createExpense(
         amount: Double,
@@ -22,7 +50,8 @@ class ExpenseRepository(
         categoryId: String,
         description: String? = null,
         note: String? = null,
-        date: String? = null
+        date: String? = null,
+        receiptImageUrl: String? = null
     ) {
         val data = hashMapOf<String, Any>(
             "amount" to amount,
@@ -34,6 +63,7 @@ class ExpenseRepository(
         description?.let { data["description"] = it }
         note?.let { data["note"] = it }
         date?.let { data["date"] = it }
+        receiptImageUrl?.let { data["receiptImageUrl"] = it }
 
         functions.getHttpsCallable("createExpense")
             .call(data)
