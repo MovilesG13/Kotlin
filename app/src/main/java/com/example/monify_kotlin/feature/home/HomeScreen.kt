@@ -30,11 +30,18 @@ fun HomeScreen(
     onGoSavings: () -> Unit,
     onAddIncome: () -> Unit,
     onAddExpense: () -> Unit,
+    onGoReports: () -> Unit = {},
 ) {
-    // Fondo general blanco; el header usa LightBlue como en el mock
     Scaffold(
         containerColor = White,
-        bottomBar = { BottomBar(Routes.HOME) { route -> if (route == Routes.SAVINGS) onGoSavings() } },
+        bottomBar = {
+            BottomBar(Routes.HOME) { route ->
+                when (route) {
+                    Routes.SAVINGS -> onGoSavings()
+                    Routes.REPORTS -> onGoReports()
+                }
+            }
+        },
         floatingActionButton = { SpeedDialFab(onAddIncome, onAddExpense) }
     ) { padding ->
         Column(
@@ -79,7 +86,6 @@ private fun BalanceHeader(name: String, month: String, balance: String) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Icono redondo a la izquierda
             Box(
                 modifier = Modifier
                     .size(42.dp)
@@ -146,7 +152,6 @@ data class Bar(val label: String, val value: Float, val color: Color)
 private fun BarChart(bars: List<Bar>, maxY: Float, gridLines: Int = 4) {
     val chartHeight = 180.dp
     Column(Modifier.fillMaxWidth()) {
-        // Área del gráfico con líneas punteadas
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -188,7 +193,6 @@ private fun BarChart(bars: List<Bar>, maxY: Float, gridLines: Int = 4) {
                 }
             }
         }
-        // Leyenda simple
         Spacer(Modifier.height(4.dp))
         Text(
             "Income  •  Expenses  •  Balance",
@@ -230,7 +234,6 @@ private fun GoalRow(goal: GoalUi) {
     val pct = (goal.current / goal.target).coerceIn(0f, 1f)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            // Iconito a la izquierda
             Box(
                 modifier = Modifier
                     .size(28.dp)
@@ -250,7 +253,6 @@ private fun GoalRow(goal: GoalUi) {
                     color = Black
                 )
             }
-            // Badge verde con porcentaje
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(10.dp))
@@ -278,6 +280,5 @@ private fun GoalRow(goal: GoalUi) {
 
 /* -------------------- utils -------------------- */
 
-private fun Float.formatMoney(): String =
-    "%,.2f".format(this)
+private fun Float.formatMoney(): String = "%,.2f".format(this)
 

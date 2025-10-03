@@ -18,6 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.monify_kotlin.feature.transactions.ui.AddExpenseViewModel
 import com.example.monify_kotlin.ui.theme.*
 import java.time.Instant
 import java.time.LocalDate
@@ -27,19 +29,55 @@ import java.time.format.DateTimeFormatter
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddExpenseScreen(onBack: () -> Unit) {
-
-    var amount by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    val categories = listOf("Food", "Transport", "Bills", "Shopping", "Other")
-    var category by remember { mutableStateOf(categories.first()) }
-    var notes by remember { mutableStateOf("") }
-    var showDatePicker by remember { mutableStateOf(false) }
-    var date by remember { mutableStateOf<LocalDate?>(null) }
+fun AddExpenseScreen(
+    onBack: () -> Unit,
+    viewModel: AddExpenseViewModel = viewModel()
+) {
+    val uiState = viewModel.uiState
     val dateFmt = remember { DateTimeFormatter.ofPattern("MMM d, yyyy") }
+    var showDatePicker by remember { mutableStateOf(false) }
+    val categories = listOf("Food", "Transport", "Bills", "Shopping", "Other")
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    Scaffold(containerColor = White, topBar = { Spacer(Modifier.height(0.dp)) }) { padding ->
+    // Navegar de vuelta cuando se guarde exitosamente
+    LaunchedEffect(uiState.success) {
+        if (uiState.success) {
+            uiState.successMessage?.let { message ->
+                snackbarHostState.showSnackbar(
+                    message = message,
+                    duration = SnackbarDuration.Short
+                )
+            }
+            kotlinx.coroutines.delay(1000) // Esperar 1 segundo para que vean el mensaje
+            onBack()
+        }
+    }
 
+    // Auto-limpiar errores después de 3 segundos
+    LaunchedEffect(uiState.error) {
+        if (uiState.error != null) {
+            snackbarHostState.showSnackbar(
+                message = uiState.error!!,
+                duration = SnackbarDuration.Short
+            )
+            kotlinx.coroutines.delay(3000)
+            viewModel.clearError()
+        }
+    }
+
+    Scaffold(
+        containerColor = White,
+        topBar = { Spacer(Modifier.height(0.dp)) },
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = if (uiState.success) Green else Red,
+                    contentColor = White
+                )
+            }
+        }
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -55,36 +93,61 @@ fun AddExpenseScreen(onBack: () -> Unit) {
                     .background(Red.copy(alpha = 0.12f))
                     .padding(16.dp)
             ) {
-                Text("Add Expense", style = MaterialTheme.typography.titleLarge, color = Black)
-                Text("Register a new expense", style = MaterialTheme.typography.bodyMedium, color = Black)
+                Text(
+                    "Add Expense",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Black
+                )
+                Text(
+                    "Register a new expense",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Black
+                )
             }
 
             Card(shape = RoundedCornerShape(20.dp)) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-
+                Column(
+                    Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    // Título de sección
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.TrendingDown, contentDescription = null, tint = Red)
+                        Icon(
+                            Icons.Outlined.TrendingDown,
+                            contentDescription = null,
+                            tint = Red
+                        )
                         Spacer(Modifier.width(8.dp))
-                        Text("Expense Details", style = MaterialTheme.typography.titleMedium, color = Black)
+                        Text(
+                            "Expense Details",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Black
+                        )
                     }
 
+                    // Amount
                     OutlinedTextField(
-                        value = amount,
-                        onValueChange = { amount = it },
+                        value = uiState.amount,
+                        onValueChange = { viewModel.updateAmount(it) },
                         label = { Text("Amount *") },
                         singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth()
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth(),
+                        isError = uiState.error?.contains("amount", ignoreCase = true) == true,
+                        prefix = { Text("$") }
                     )
 
+                    // Description
                     OutlinedTextField(
-                        value = description,
-                        onValueChange = { description = it },
+                        value = uiState.description,
+                        onValueChange = { viewModel.updateDescription(it) },
                         label = { Text("Description") },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("e.g., Lunch at restaurant") }
                     )
 
+                    // Category dropdown
                     var expanded by remember { mutableStateOf(false) }
                     ExposedDropdownMenuBox(
                         expanded = expanded,
@@ -92,60 +155,98 @@ fun AddExpenseScreen(onBack: () -> Unit) {
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         OutlinedTextField(
-                            value = category,
+                            value = uiState.category,
                             onValueChange = {},
                             readOnly = true,
                             label = { Text("Category *") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded)
+                            },
                             modifier = Modifier
                                 .menuAnchor()
                                 .fillMaxWidth()
                         )
-                        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
                             categories.forEach { opt ->
                                 DropdownMenuItem(
                                     text = { Text(opt) },
-                                    onClick = { category = opt; expanded = false }
+                                    onClick = {
+                                        viewModel.updateCategory(opt)
+                                        expanded = false
+                                    }
                                 )
                             }
                         }
                     }
 
-                    OutlinedTextField(
-                        value = date?.format(dateFmt) ?: "Select a date",
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Date *") },
-                        trailingIcon = { Icon(Icons.Filled.CalendarToday, contentDescription = null) },
+                    // Date picker
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { showDatePicker = true }
-                    )
+                    ) {
+                        OutlinedTextField(
+                            value = uiState.date?.format(dateFmt) ?: "Select a date",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Date *") },
+                            trailingIcon = {
+                                IconButton(onClick = { showDatePicker = true }) {
+                                    Icon(Icons.Filled.CalendarToday, contentDescription = "Select date")
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            isError = uiState.error?.contains("date", ignoreCase = true) == true,
+                            enabled = false,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                                disabledBorderColor = MaterialTheme.colorScheme.outline,
+                                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
+                    }
 
+                    // Notes
                     OutlinedTextField(
-                        value = notes,
-                        onValueChange = { notes = it },
+                        value = uiState.notes,
+                        onValueChange = { viewModel.updateNotes(it) },
                         label = { Text("Notes (optional)") },
                         minLines = 3,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Additional details...") }
                     )
 
-                    // Save en rojo (como el mock)
+                    // Save button
                     Button(
-                        onClick = onBack,
+                        onClick = { viewModel.saveExpense() },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Red)
+                        colors = ButtonDefaults.buttonColors(containerColor = Red),
+                        enabled = !uiState.isLoading
                     ) {
-                        Icon(Icons.Filled.Save, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Save Expense")
+                        if (uiState.isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = White
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("Saving...")
+                        } else {
+                            Icon(Icons.Filled.Save, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Save Expense")
+                        }
                     }
                 }
             }
         }
 
+        // Date Picker Dialog
         if (showDatePicker) {
             val pickerState = rememberDatePickerState()
             DatePickerDialog(
@@ -154,13 +255,24 @@ fun AddExpenseScreen(onBack: () -> Unit) {
                     TextButton(onClick = {
                         val millis = pickerState.selectedDateMillis
                         if (millis != null) {
-                            date = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+                            val date = Instant.ofEpochMilli(millis)
+                                .atZone(ZoneId.systemDefault())
+                                .toLocalDate()
+                            viewModel.updateDate(date)
                         }
                         showDatePicker = false
-                    }) { Text("OK") }
+                    }) {
+                        Text("OK")
+                    }
                 },
-                dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Cancel") } }
-            ) { DatePicker(pickerState) }
+                dismissButton = {
+                    TextButton(onClick = { showDatePicker = false }) {
+                        Text("Cancel")
+                    }
+                }
+            ) {
+                DatePicker(pickerState)
+            }
         }
     }
 }

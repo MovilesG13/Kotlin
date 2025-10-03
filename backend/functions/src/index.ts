@@ -34,6 +34,21 @@ export const authOnCreate = functionsV1.auth.user().onCreate(async (user: UserRe
     lastExpenseAt: null,
     lastIncomeAt: null,
   });
+//Crear categorías por defecto
+  const defaultCategories = [
+    { id: "food", name: "Food", icon: "🍔" },
+    { id: "transport", name: "Transport", icon: "🚗" },
+    { id: "bills", name: "Bills", icon: "💡" },
+    { id: "shopping", name: "Shopping", icon: "🛍️" },
+    { id: "other", name: "Other", icon: "📦" }
+  ];
+
+  const batch = db.batch();
+  for (const cat of defaultCategories) {
+    const docRef = db.collection(`users/${uid}/categories`).doc(cat.id);
+    batch.set(docRef, { name: cat.name, icon: cat.icon });
+  }
+  await batch.commit();
 });
 
 
@@ -69,12 +84,32 @@ export const createCategory = onCall(async (req) => {
  *  EXPENSE
  *  ========================= */
 export const createExpense = onCall(async (req) => {
-  const uid = req.auth?.uid; if (!uid) throw new Error("UNAUTHENTICATED");
-  const { amount, currency, categoryId, note } = req.data || {};
+  const uid = req.auth?.uid;
+  if (!uid) throw new Error("UNAUTHENTICATED");
+
+  const { amount, currency, categoryId, note, description, date } = req.data || {};
+
   if (!(amount > 0) || !currency || !categoryId) throw new Error("INVALID_ARGS");
+
+  // Si se proporciona una fecha específica, usarla; de lo contrario usar ahora
+  const timestamp = date
+    ? Timestamp.fromDate(new Date(date))
+    : Timestamp.now();
+
   const ref = await db.collection("users").doc(uid).collection("expenses")
-    .add({ amount, currency, categoryId, note: note ?? null, ts: Timestamp.now() });
-  await db.doc(`users/${uid}/metrics`).set({ lastExpenseAt: Timestamp.now() }, { merge: true });
+    .add({
+      amount,
+      currency,
+      categoryId,
+      note: note ?? null,
+      description: description ?? null,
+      ts: timestamp
+    });
+
+  await db.doc(`users/${uid}/metrics`).set({
+    lastExpenseAt: timestamp
+  }, { merge: true });
+
   return { expenseId: ref.id };
 });
 

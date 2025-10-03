@@ -11,10 +11,11 @@ import com.example.monify_kotlin.feature.login.ui.SignUpScreen
 import com.example.monify_kotlin.feature.savings.ui.SavingsScreen
 import com.example.monify_kotlin.feature.transactions.ui.AddExpenseScreen
 import com.example.monify_kotlin.feature.transactions.ui.AddIncomeScreen
+import com.example.monify_kotlin.feature.reports.ui.ReportsScreen
 import android.os.Build
 import androidx.compose.material3.Text
-
 import androidx.annotation.RequiresApi
+
 object Routes {
     const val MAIN_LOGIN = "main_login"
     const val LOGIN = "login"
@@ -23,6 +24,7 @@ object Routes {
     const val SAVINGS = "savings"
     const val ADD_INCOME = "add_income"
     const val ADD_EXPENSE = "add_expense"
+    const val REPORTS = "reports"
 }
 
 @Composable
@@ -63,13 +65,26 @@ fun AppNavGraph(navController: NavHostController) {
             HomeScreen(
                 onGoSavings = { navController.navigate(Routes.SAVINGS) },
                 onAddIncome = { navController.navigate(Routes.ADD_INCOME) },
-                onAddExpense = { navController.navigate(Routes.ADD_EXPENSE) }
+                onAddExpense = { navController.navigate(Routes.ADD_EXPENSE) },
+                onGoReports = { navController.navigate(Routes.REPORTS) }
             )
         }
 
         composable(Routes.SAVINGS) {
             SavingsScreen(onBackHome = { navController.navigate(Routes.HOME) })
         }
+
+        composable(Routes.REPORTS) {
+            ReportsScreen(
+                onNavigate = { route ->
+                    navController.navigate(route) {
+                        popUpTo(Routes.HOME) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+
         composable(Routes.ADD_INCOME) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 AddIncomeScreen(onBack = { navController.popBackStack() })
@@ -85,7 +100,6 @@ fun AppNavGraph(navController: NavHostController) {
                 Text("Esta pantalla requiere Android O (API 26) o superior")
             }
         }
-
     }
 }
 

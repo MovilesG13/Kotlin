@@ -13,8 +13,8 @@ data class BottomItem(val route: String, val label: String, val icon: ImageVecto
 fun BottomBar(currentRoute: String?, onNavigate: (String) -> Unit) {
     val items = listOf(
         BottomItem(Routes.HOME,    "Inicio",   Icons.Filled.Home,      true),
-        BottomItem(Routes.SAVINGS, "Ahorros",  Icons.Filled.AccountBalance, true), // único funcional
-        BottomItem("reports",      "Reportes", Icons.Filled.Assessment, false),
+        BottomItem(Routes.SAVINGS, "Ahorros",  Icons.Filled.AccountBalance, true),
+        BottomItem(Routes.REPORTS, "Reportes", Icons.Filled.Assessment, true),
         BottomItem("profile",      "Perfil",   Icons.Filled.Person,    false),
     )
     NavigationBar {
