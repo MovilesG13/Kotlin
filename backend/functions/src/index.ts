@@ -117,12 +117,31 @@ export const createExpense = onCall(async (req) => {
  *  INCOME
  *  ========================= */
 export const createIncome = onCall(async (req) => {
-  const uid = req.auth?.uid; if (!uid) throw new Error("UNAUTHENTICATED");
-  const { amount, currency, source } = req.data || {};
+  const uid = req.auth?.uid;
+  if (!uid) throw new Error("UNAUTHENTICATED");
+
+  const { amount, currency, source, description, date } = req.data || {};
+
   if (!(amount > 0) || !currency) throw new Error("INVALID_ARGS");
+
+  // Si se proporciona una fecha específica, usarla; de lo contrario usar ahora
+  const timestamp = date
+    ? Timestamp.fromDate(new Date(date))
+    : Timestamp.now();
+
   const ref = await db.collection("users").doc(uid).collection("incomes")
-    .add({ amount, currency, source: source ?? null, ts: Timestamp.now() });
-  await db.doc(`users/${uid}/metrics`).set({ lastIncomeAt: Timestamp.now() }, { merge: true });
+    .add({
+      amount,
+      currency,
+      source: source ?? null,
+      description: description ?? null,
+      ts: timestamp
+    });
+
+  await db.doc(`users/${uid}/metrics`).set({
+    lastIncomeAt: timestamp
+  }, { merge: true });
+
   return { incomeId: ref.id };
 });
 

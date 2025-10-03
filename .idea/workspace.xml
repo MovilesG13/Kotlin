@@ -9,7 +9,13 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d76966a4-be6e-4442-b75d-f63f6fe83516" name="Changes" comment="expenses + expenses report by categories" />
+    <list default="true" id="d76966a4-be6e-4442-b75d-f63f6fe83516" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/example/monify_kotlin/data/IncomeRepository.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/monify_kotlin/feature/transactions/ui/AddIncomeScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/monify_kotlin/feature/transactions/ui/AddIncomeScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/monify_kotlin/feature/transactions/ui/AddIncomeViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/monify_kotlin/feature/transactions/ui/AddIncomeViewModel.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/functions/src/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/functions/src/index.ts" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -99,7 +105,7 @@
     "cf.first.check.clang-format": "false",
     "cidr.known.project.marker": "true",
     "com.google.services.firebase.aqiPopupShown": "true",
-    "git-widget-placeholder": "expenses-implementation",
+    "git-widget-placeholder": "income-implementation",
     "last_opened_file_path": "C:/Users/sebas/AndroidStudioProjects/Kotlin/app/src/main/res/drawable",
     "project.structure.last.edited": "Modules",
     "project.structure.proportion": "0.17",
