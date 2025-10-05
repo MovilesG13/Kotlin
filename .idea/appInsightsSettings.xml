@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.example.monify_kotlin" />
+                  <option name="mobileSdkAppId" value="1:783109027463:android:985919d2ce60530d3aea22" />
+                  <option name="projectId" value="monify-1384d" />
+                  <option name="projectNumber" value="783109027463" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />

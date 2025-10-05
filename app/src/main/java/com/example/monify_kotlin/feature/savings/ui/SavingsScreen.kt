@@ -6,13 +6,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Savings
-import androidx.compose.material.icons.outlined.TrendingUp
-import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,17 +17,30 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.monify_kotlin.core.ui.BottomBar
 import com.example.monify_kotlin.core.navigation.Routes
-import com.example.monify_kotlin.feature.savings.*
+import com.example.monify_kotlin.core.ui.BottomBar
+import com.example.monify_kotlin.core.ui.formatMoney
+import com.example.monify_kotlin.feature.savings.SavingGoal
+import com.example.monify_kotlin.feature.savings.SavingsTab
+import com.example.monify_kotlin.feature.savings.SavingsViewModel
 import com.example.monify_kotlin.ui.theme.*
 
 @Composable
 fun SavingsScreen(onBackHome: () -> Unit, vm: SavingsViewModel = viewModel()) {
     val state = vm.uiState
+
+    if (vm.showAddGoalDialog) {
+        AddGoalDialog(
+            onDismiss = vm::dismissAddGoalDialog,
+            onSave = { title, target, icon ->
+                vm.addGoal(title, target, icon)
+            }
+        )
+    }
 
     Scaffold(
         containerColor = White,
@@ -48,29 +57,27 @@ fun SavingsScreen(onBackHome: () -> Unit, vm: SavingsViewModel = viewModel()) {
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // ----------- HEADER FIJO (siempre visible) -----------
             SavingsHeader(
                 totalSaved = state.totalSaved,
-                totalTarget = state.totalTarget
+                totalTarget = state.totalTarget,
+                onAddGoal = vm::onAddGoalClicked
             )
 
-            // ----------- SEGMENTED TABS -----------
             SavingsTabs(
                 selected = state.tab,
                 onSelect = vm::selectTab
             )
 
-            // ----------- CONTENIDO DINÁMICO -----------
             Crossfade(targetState = state.tab, label = "savings_tabs") { tab ->
                 when (tab) {
-                    SavingsTab.SUMMARY   -> SummaryTab(
+                    SavingsTab.SUMMARY -> SummaryTab(
                         activeGoals = state.activeGoals,
                         monthlySavings = state.monthlySavings,
                         saved = state.totalSaved,
                         target = state.totalTarget
                     )
-                    SavingsTab.MY_GOALS  -> MyGoalsTab(goals = state.goals)
-                    SavingsTab.PROGRESS  -> ProgressTab()
+                    SavingsTab.MY_GOALS -> MyGoalsTab(goals = state.goals)
+                    SavingsTab.PROGRESS -> ProgressTab()
                 }
             }
 
@@ -79,13 +86,71 @@ fun SavingsScreen(onBackHome: () -> Unit, vm: SavingsViewModel = viewModel()) {
     }
 }
 
+@Composable
+private fun AddGoalDialog(
+    onDismiss: () -> Unit,
+    onSave: (String, Double, String) -> Unit
+) {
+    var title by remember { mutableStateOf("") }
+    var target by remember { mutableStateOf("") }
+    var icon by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add a New Goal") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Goal Title") },
+                    singleLine = true
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = target,
+                    onValueChange = { target = it },
+                    label = { Text("Target Amount") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = icon,
+                    onValueChange = { icon = it },
+                    label = { Text("Icon (e.g., phone, house)") },
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val targetAmount = target.toDoubleOrNull() ?: 0.0
+                    if (title.isNotBlank() && targetAmount > 0) {
+                        onSave(title, targetAmount, icon)
+                    }
+                }
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+
 /* ============================================================
    Header
    ============================================================ */
 
 @Composable
-private fun SavingsHeader(totalSaved: Float, totalTarget: Float) {
-    val pct = (totalSaved / totalTarget).coerceIn(0f, 1f)
+private fun SavingsHeader(totalSaved: Float, totalTarget: Float, onAddGoal: () -> Unit) {
+    val pct = if (totalTarget > 0) (totalSaved / totalTarget).coerceIn(0f, 1f) else 0f
 
     Surface(
         shape = RoundedCornerShape(22.dp),
@@ -109,7 +174,7 @@ private fun SavingsHeader(totalSaved: Float, totalTarget: Float) {
                     color = Blue,
                     modifier = Modifier.weight(1f)
                 )
-                IconButton(onClick = { /* mock add goal */ }) {
+                IconButton(onClick = onAddGoal) {
                     Icon(Icons.Outlined.Add, contentDescription = "Add", tint = Blue)
                 }
             }
@@ -292,7 +357,7 @@ private fun SummaryKpiCard(
 /* Donut chart simulado */
 @Composable
 private fun DonutChart(saved: Float, target: Float, modifier: Modifier = Modifier) {
-    val pct = (saved / target).coerceIn(0f, 1f)
+    val pct = if (target > 0) (saved / target).coerceIn(0f, 1f) else 0f
     Box(modifier, contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val stroke = 24f
@@ -412,10 +477,3 @@ private fun ProgressTab() {
         }
     }
 }
-
-/* ============================================================
-   utils
-   ============================================================ */
-
-private fun Float.formatMoney(): String = "%,.2f".format(this)
-

@@ -20,8 +20,8 @@ class HomeRepository(
     suspend fun getMonthlySummary(yyyymm: String): Triple<Double, Double, Double> {
         val res = fx.getHttpsCallable("getMonthlySummary").call(mapOf("month" to yyyymm)).await()
         val m = res.data as Map<*, *>
-        val income = (m["income"] as Number?)?.toDouble() ?: 0.0
-        val expenses = (m["expenses"] as Number?)?.toDouble() ?: 0.0
+        val income = (m["totalIncome"] as Number?)?.toDouble() ?: 0.0
+        val expenses = (m["totalExpenses"] as Number?)?.toDouble() ?: 0.0
         val balance = income - expenses
         return Triple(income, expenses, balance)
     }
