@@ -8,6 +8,8 @@ plugins {
     alias(libs.plugins.google.services)
     id("com.google.firebase.crashlytics") version "3.0.6"
 
+    alias(libs.plugins.kotlin.ksp)
+
 
 }
 
@@ -94,6 +96,27 @@ dependencies {
 
     // Para Accompanist Permissions
     implementation("com.google.accompanist:accompanist-permissions:0.32.0")
+
+
+    // Connectivity
+    implementation("androidx.compose.runtime:runtime-livedata:1.5.4")
+
+    // DataStore for token persistence
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
+
+    // ConnectivityManager observability
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.2")
+
+
+    // Image caching - Coil (easiest and modern)
+    implementation("io.coil-kt:coil-compose:2.5.0")
+
+    // Room for local database (for transaction caching)
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    ksp("androidx.room:room-compiler:2.6.1")
+
+    // Work Manager for background sync
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
 }
-
-

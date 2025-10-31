@@ -28,8 +28,11 @@ object Routes {
 }
 
 @Composable
-fun AppNavGraph(navController: NavHostController) {
-    NavHost(navController = navController, startDestination = Routes.MAIN_LOGIN) {
+fun AppNavGraph(
+    navController: NavHostController,
+    startDestination: String = Routes.MAIN_LOGIN
+) {
+    NavHost(navController = navController, startDestination = startDestination) {
 
         composable(Routes.MAIN_LOGIN) {
             MainLoginScreen(
@@ -102,4 +105,3 @@ fun AppNavGraph(navController: NavHostController) {
         }
     }
 }
-

@@ -38,6 +38,9 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
@@ -50,7 +53,6 @@ fun AddExpenseScreen(
     val context = LocalContext.current
     val dateFmt = remember { DateTimeFormatter.ofPattern("MMM d, yyyy") }
 
-    // Estados locales
     var showDatePicker by remember { mutableStateOf(false) }
     var showImageSourceDialog by remember { mutableStateOf(false) }
     var tempPhotoUri by remember { mutableStateOf<Uri?>(null) }
@@ -59,7 +61,6 @@ fun AddExpenseScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
 
-    // Función para crear URI temporal
     fun createTempImageUri(): Uri {
         val tempFile = File.createTempFile(
             "receipt_${System.currentTimeMillis()}",
@@ -76,7 +77,6 @@ fun AddExpenseScreen(
         )
     }
 
-    // Launcher para tomar foto con cámara
     val takePictureLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
@@ -85,34 +85,25 @@ fun AddExpenseScreen(
         }
     }
 
-    // Launcher para seleccionar de galería
     val pickImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         uri?.let { viewModel.uploadReceiptImage(it) }
     }
 
-    // Efecto: Navegar al guardar exitosamente
     LaunchedEffect(uiState.success) {
         if (uiState.success) {
             uiState.successMessage?.let { message ->
-                snackbarHostState.showSnackbar(
-                    message = message,
-                    duration = SnackbarDuration.Short
-                )
+                snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
             }
             kotlinx.coroutines.delay(1000)
             onBack()
         }
     }
 
-    // Efecto: Mostrar errores
     LaunchedEffect(uiState.error) {
         if (uiState.error != null) {
-            snackbarHostState.showSnackbar(
-                message = uiState.error!!,
-                duration = SnackbarDuration.Short
-            )
+            snackbarHostState.showSnackbar(uiState.error!!, duration = SnackbarDuration.Short)
             kotlinx.coroutines.delay(3000)
             viewModel.clearError()
         }
@@ -131,230 +122,202 @@ fun AddExpenseScreen(
             }
         }
     ) { padding ->
-        Column(
+        // —— AHORA SCROLLABLE —— //
+        LazyColumn(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
+                .fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = padding.calculateTopPadding() + 16.dp,
+                bottom = padding.calculateBottomPadding() + 24.dp
+            ),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // ========== HEADER ==========
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Red.copy(alpha = 0.12f))
-                    .padding(16.dp)
-            ) {
-                Text(
-                    "Add Expense",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = Black
-                )
-                Text(
-                    "Register a new expense",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Black
-                )
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Red.copy(alpha = 0.12f))
+                        .padding(16.dp)
+                ) {
+                    Text("Add Expense", style = MaterialTheme.typography.titleLarge, color = Black)
+                    Text("Register a new expense", style = MaterialTheme.typography.bodyMedium, color = Black)
+                }
             }
 
             // ========== FORMULARIO ==========
-            Card(shape = RoundedCornerShape(20.dp)) {
-                Column(
-                    Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    // Título de sección
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.TrendingDown, contentDescription = null, tint = Red)
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            "Expense Details",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Black
-                        )
-                    }
-
-                    // Campo: Amount
-                    OutlinedTextField(
-                        value = uiState.amount,
-                        onValueChange = { viewModel.updateAmount(it) },
-                        label = { Text("Amount *") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.fillMaxWidth(),
-                        isError = uiState.error?.contains("amount", ignoreCase = true) == true,
-                        prefix = { Text("$") }
-                    )
-
-                    // Campo: Description
-                    OutlinedTextField(
-                        value = uiState.description,
-                        onValueChange = { viewModel.updateDescription(it) },
-                        label = { Text("Description") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("e.g., Lunch at restaurant") }
-                    )
-
-                    // Campo: Category (Dropdown)
-                    var expanded by remember { mutableStateOf(false) }
-                    ExposedDropdownMenuBox(
-                        expanded = expanded,
-                        onExpandedChange = { expanded = !expanded },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        OutlinedTextField(
-                            value = uiState.category,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Category *") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth()
-                        )
-                        ExposedDropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false }
-                        ) {
-                            categories.forEach { opt ->
-                                DropdownMenuItem(
-                                    text = { Text(opt) },
-                                    onClick = {
-                                        viewModel.updateCategory(opt)
-                                        expanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-
-                    // Campo: Date (Clickeable)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showDatePicker = true }
-                    ) {
-                        OutlinedTextField(
-                            value = uiState.date?.format(dateFmt) ?: "Select a date",
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Date *") },
-                            trailingIcon = {
-                                IconButton(onClick = { showDatePicker = true }) {
-                                    Icon(Icons.Filled.CalendarToday, contentDescription = "Select date")
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            isError = uiState.error?.contains("date", ignoreCase = true) == true,
-                            enabled = false,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                                disabledBorderColor = MaterialTheme.colorScheme.outline,
-                                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        )
-                    }
-
-                    // Campo: Notes
-                    OutlinedTextField(
-                        value = uiState.notes,
-                        onValueChange = { viewModel.updateNotes(it) },
-                        label = { Text("Notes (optional)") },
-                        minLines = 3,
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Additional details...") }
-                    )
-
-                    // ========== SECCIÓN DE FOTO DE RECIBO ==========
+            item {
+                Card(shape = RoundedCornerShape(20.dp)) {
                     Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        // Header con loading indicator
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                "Receipt Photo (optional)",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = Black
-                            )
-                            if (uiState.isUploadingImage) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    color = Red
-                                )
-                            }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Outlined.TrendingDown, contentDescription = null, tint = Red)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Expense Details", style = MaterialTheme.typography.titleMedium, color = Black)
                         }
 
-                        // Mostrar imagen o botón para agregar
-                        if (uiState.receiptImageUri != null) {
-                            // Preview de la imagen capturada
-                            Box(
+                        OutlinedTextField(
+                            value = uiState.amount,
+                            onValueChange = { viewModel.updateAmount(it) },
+                            label = { Text("Amount *") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.fillMaxWidth(),
+                            isError = uiState.error?.contains("amount", ignoreCase = true) == true,
+                            prefix = { Text("$") }
+                        )
+
+                        OutlinedTextField(
+                            value = uiState.description,
+                            onValueChange = { viewModel.updateDescription(it) },
+                            label = { Text("Description") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text("e.g., Lunch at restaurant") }
+                        )
+
+                        var expanded by remember { mutableStateOf(false) }
+                        ExposedDropdownMenuBox(
+                            expanded = expanded,
+                            onExpandedChange = { expanded = !expanded },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            OutlinedTextField(
+                                value = uiState.category,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Category *") },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
                                 modifier = Modifier
+                                    .menuAnchor()
                                     .fillMaxWidth()
-                                    .height(200.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .border(1.dp, Gray, RoundedCornerShape(12.dp))
+                            )
+                            ExposedDropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false }
                             ) {
-                                AsyncImage(
-                                    model = uiState.receiptImageUri,
-                                    contentDescription = "Receipt",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                                // Botón para eliminar imagen
-                                IconButton(
-                                    onClick = { viewModel.removeReceiptImage() },
-                                    modifier = Modifier
-                                        .align(Alignment.TopEnd)
-                                        .padding(8.dp)
-                                        .background(Red, CircleShape)
-                                ) {
-                                    Icon(
-                                        Icons.Filled.Close,
-                                        contentDescription = "Remove",
-                                        tint = White
+                                categories.forEach { opt ->
+                                    DropdownMenuItem(
+                                        text = { Text(opt) },
+                                        onClick = {
+                                            viewModel.updateCategory(opt)
+                                            expanded = false
+                                        }
                                     )
                                 }
                             }
-                        } else {
-                            // Botón para agregar foto
-                            OutlinedButton(
-                                onClick = { showImageSourceDialog = true },
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showDatePicker = true }
+                        ) {
+                            OutlinedTextField(
+                                value = uiState.date?.format(dateFmt) ?: "Select a date",
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Date *") },
+                                trailingIcon = {
+                                    IconButton(onClick = { showDatePicker = true }) {
+                                        Icon(Icons.Filled.CalendarToday, contentDescription = "Select date")
+                                    }
+                                },
                                 modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Red)
+                                isError = uiState.error?.contains("date", ignoreCase = true) == true,
+                                enabled = false,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                                    disabledBorderColor = MaterialTheme.colorScheme.outline,
+                                    disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            )
+                        }
+
+                        OutlinedTextField(
+                            value = uiState.notes,
+                            onValueChange = { viewModel.updateNotes(it) },
+                            label = { Text("Notes (optional)") },
+                            minLines = 3,
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text("Additional details...") }
+                        )
+
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Filled.CameraAlt, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("Add Receipt Photo")
+                                Text("Receipt Photo (optional)", style = MaterialTheme.typography.bodyLarge, color = Black)
+                                if (uiState.isUploadingImage) {
+                                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Red)
+                                }
+                            }
+
+                            if (uiState.receiptImageUri != null) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(200.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .border(1.dp, Gray, RoundedCornerShape(12.dp))
+                                ) {
+                                    AsyncImage(
+                                        model = uiState.receiptImageUri,
+                                        contentDescription = "Receipt",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                    IconButton(
+                                        onClick = { viewModel.removeReceiptImage() },
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(8.dp)
+                                            .background(Red, CircleShape)
+                                    ) {
+                                        Icon(Icons.Filled.Close, contentDescription = "Remove", tint = White)
+                                    }
+                                }
+                            } else {
+                                OutlinedButton(
+                                    onClick = { showImageSourceDialog = true },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Red)
+                                ) {
+                                    Icon(Icons.Filled.CameraAlt, contentDescription = null)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Add Receipt Photo")
+                                }
                             }
                         }
-                    }
 
-                    // ========== BOTÓN GUARDAR ==========
-                    Button(
-                        onClick = { viewModel.saveExpense() },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Red),
-                        enabled = !uiState.isLoading && !uiState.isUploadingImage
-                    ) {
-                        if (uiState.isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                color = White
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text("Saving...")
-                        } else {
-                            Icon(Icons.Filled.Save, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Save Expense")
+                        Button(
+                            onClick = { viewModel.saveExpense() },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Red),
+                            enabled = !uiState.isLoading && !uiState.isUploadingImage
+                        ) {
+                            if (uiState.isLoading) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = White)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Saving...")
+                            } else {
+                                Icon(Icons.Filled.Save, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Save Expense")
+                            }
                         }
                     }
                 }
@@ -362,8 +325,6 @@ fun AddExpenseScreen(
         }
 
         // ========== DIÁLOGOS ==========
-
-        // Date Picker Dialog
         if (showDatePicker) {
             val pickerState = rememberDatePickerState()
             DatePickerDialog(
@@ -378,21 +339,14 @@ fun AddExpenseScreen(
                             viewModel.updateDate(date)
                         }
                         showDatePicker = false
-                    }) {
-                        Text("OK")
-                    }
+                    }) { Text("OK") }
                 },
-                dismissButton = {
-                    TextButton(onClick = { showDatePicker = false }) {
-                        Text("Cancel")
-                    }
-                }
+                dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Cancel") } }
             ) {
                 DatePicker(pickerState)
             }
         }
 
-        // Image Source Dialog (Camera o Gallery)
         if (showImageSourceDialog) {
             AlertDialog(
                 onDismissRequest = { showImageSourceDialog = false },

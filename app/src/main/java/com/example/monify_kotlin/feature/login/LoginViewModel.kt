@@ -1,43 +1,100 @@
 package com.example.monify_kotlin.feature.login
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.monify_kotlin.core.util.ConnectivityObserver
 import com.example.monify_kotlin.data.AuthRepository
+import com.example.monify_kotlin.data.TokenManager
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 data class AuthUiState(
     val loading: Boolean = false,
     val error: String? = null,
-    val loggedIn: Boolean = false
+    val loggedIn: Boolean = false,
+    val isConnected: Boolean = true,
+    val hasValidToken: Boolean = false
 )
 
 class LoginViewModel(
-    private val repo: AuthRepository = AuthRepository()
-) : ViewModel() {
+    application: Application
+) : AndroidViewModel(application) {
 
-    var state = androidx.compose.runtime.mutableStateOf(AuthUiState())
-        private set
+    private val tokenManager = TokenManager(application)
+    private val repo = AuthRepository(tokenManager)
+    private val connectivityObserver = ConnectivityObserver(application)
+
+    private val _state = MutableStateFlow(AuthUiState())
+    val state: StateFlow<AuthUiState> = _state.asStateFlow()
+
+    init {
+        observeConnectivity()
+        checkExistingToken()
+    }
+
+    private fun observeConnectivity() {
+        viewModelScope.launch {
+            connectivityObserver.isConnected.collect { isConnected ->
+                _state.value = _state.value.copy(isConnected = isConnected)
+            }
+        }
+    }
+
+    private fun checkExistingToken() {
+        viewModelScope.launch {
+            val isValid = tokenManager.isTokenValid()
+            if (isValid && repo.isUserLoggedIn()) {
+                _state.value = _state.value.copy(
+                    hasValidToken = true,
+                    loggedIn = true
+                )
+            }
+        }
+    }
 
     fun signIn(email: String, pass: String) {
-        state.value = state.value.copy(loading = true, error = null)
+        if (!_state.value.isConnected) {
+            _state.value = _state.value.copy(
+                error = "No internet connection. Please connect to log in."
+            )
+            return
+        }
+
+        _state.value = _state.value.copy(loading = true, error = null)
         viewModelScope.launch {
             try {
                 repo.signIn(email, pass)
-                state.value = AuthUiState(loggedIn = true)
+                _state.value = AuthUiState(loggedIn = true, isConnected = _state.value.isConnected)
             } catch (e: Exception) {
-                state.value = AuthUiState(error = e.message ?: "Login error")
+                _state.value = _state.value.copy(
+                    loading = false,
+                    error = e.message ?: "Login error"
+                )
             }
         }
     }
 
     fun signUp(email: String, pass: String) {
-        state.value = state.value.copy(loading = true, error = null)
+        if (!_state.value.isConnected) {
+            _state.value = _state.value.copy(
+                error = "No internet connection. Please connect to sign up."
+            )
+            return
+        }
+
+        _state.value = _state.value.copy(loading = true, error = null)
         viewModelScope.launch {
             try {
                 repo.signUp(email, pass)
-                state.value = AuthUiState(loggedIn = true)
+                _state.value = AuthUiState(loggedIn = true, isConnected = _state.value.isConnected)
             } catch (e: Exception) {
-                state.value = AuthUiState(error = e.message ?: "Signup error")
+                _state.value = _state.value.copy(
+                    loading = false,
+                    error = e.message ?: "Signup error"
+                )
             }
         }
     }

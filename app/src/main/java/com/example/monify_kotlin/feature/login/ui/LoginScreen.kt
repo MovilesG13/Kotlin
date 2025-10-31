@@ -4,6 +4,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -11,18 +13,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.monify_kotlin.R
 import com.example.monify_kotlin.feature.login.LoginViewModel
+import com.example.monify_kotlin.ui.theme.Blue
 
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit
 ) {
     val vm: LoginViewModel = viewModel()
-    val ui = vm.state.value
+    val ui by vm.state.collectAsState()
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -34,11 +39,30 @@ fun LoginScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFB3E5FC))
+            .background(Color(0xFFC8E0E4))
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 32.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Connectivity Banner
+        if (!ui.isConnected) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFCDD2)),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = "⚠️ Offline - Please connect to log in",
+                    modifier = Modifier.padding(12.dp),
+                    color = Color(0xFFC62828),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+
         Spacer(Modifier.height(40.dp))
         Image(
             painter = painterResource(id = R.drawable.monify_logo),
@@ -47,13 +71,25 @@ fun LoginScreen(
         )
         Spacer(Modifier.height(40.dp))
 
+        // "Login" Title
+        Text(
+            text = "Login",
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF0048C4),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 24.dp)
+        )
+
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
             placeholder = { Text("Email") },
             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
             shape = RoundedCornerShape(12.dp),
-            singleLine = true
+            singleLine = true,
+            enabled = ui.isConnected
         )
         OutlinedTextField(
             value = password,
@@ -62,7 +98,8 @@ fun LoginScreen(
             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
             shape = RoundedCornerShape(12.dp),
             singleLine = true,
-            visualTransformation = PasswordVisualTransformation()
+            visualTransformation = PasswordVisualTransformation(),
+            enabled = ui.isConnected
         )
 
         Spacer(Modifier.height(16.dp))
@@ -75,10 +112,11 @@ fun LoginScreen(
             },
             modifier = Modifier.fillMaxWidth().height(48.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFFCE7F3),
-                contentColor = Color(0xFF4A148C)
+                containerColor = Blue,
+                contentColor = Color.White
             ),
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(12.dp),
+            enabled = ui.isConnected && !ui.loading
         ) {
             Text(if (ui.loading) "Ingresando..." else "Log In")
         }
@@ -95,5 +133,7 @@ fun LoginScreen(
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.clickable { /* TODO */ }
         )
+
+        Spacer(Modifier.height(40.dp))
     }
 }

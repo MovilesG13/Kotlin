@@ -3,6 +3,8 @@ package com.example.monify_kotlin.feature.login.ui
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -13,7 +15,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -21,6 +22,7 @@ import androidx.navigation.NavController
 import com.example.monify_kotlin.R
 import com.example.monify_kotlin.core.navigation.Routes
 import com.example.monify_kotlin.feature.login.LoginViewModel
+import com.example.monify_kotlin.ui.theme.Blue
 
 @Composable
 fun SignUpScreen(
@@ -28,7 +30,7 @@ fun SignUpScreen(
     onSignUpSuccess: () -> Unit
 ) {
     val vm: LoginViewModel = viewModel()
-    val ui = vm.state.value
+    val ui by vm.state.collectAsState()
 
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -41,15 +43,35 @@ fun SignUpScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFB3E5FC))
+            .background(Color(0xFFC8E0E4))
             .padding(16.dp),
         contentAlignment = Alignment.TopCenter
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
         ) {
+            // Connectivity Banner
+            if (!ui.isConnected) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFCDD2)),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = "⚠️ Offline - Please connect to sign up",
+                        modifier = Modifier.padding(12.dp),
+                        color = Color(0xFFC62828),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
             Spacer(Modifier.height(40.dp))
             Image(
                 painter = painterResource(id = R.drawable.monify_logo),
@@ -61,26 +83,35 @@ fun SignUpScreen(
                 text = "Create Account",
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White,
+                color = Blue,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(32.dp))
 
             OutlinedTextField(
-                value = name, onValueChange = { name = it }, label = { Text("Name") },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp)
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Name") },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+                enabled = ui.isConnected
             )
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(
-                value = email, onValueChange = { email = it }, label = { Text("Email") },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp)
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Email") },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+                enabled = ui.isConnected
             )
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(
-                value = password, onValueChange = { password = it }, label = { Text("Password") },
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Password") },
                 visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp)
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+                enabled = ui.isConnected
             )
 
             Spacer(Modifier.height(24.dp))
@@ -97,14 +128,15 @@ fun SignUpScreen(
                     .height(50.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFF3E5F5),
-                    contentColor = Color(0xFF6A1B9A)
-                )
+                    containerColor = Blue,
+                    contentColor = Color.White
+                ),
+                enabled = ui.isConnected && !ui.loading
             ) {
                 Text(if (ui.loading) "Creando..." else "Sign up")
             }
 
-            Spacer(Modifier.height(8.dp) )
+            Spacer(Modifier.height(8.dp))
             if (ui.error != null) {
                 Text(ui.error!!, color = Color.Red, style = MaterialTheme.typography.bodyMedium)
             }
@@ -117,7 +149,8 @@ fun SignUpScreen(
                     fontSize = 14.sp
                 )
             }
+
+            Spacer(Modifier.height(40.dp))
         }
     }
 }
-
