@@ -40,6 +40,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.graphics.Color
+
+import androidx.compose.material.icons.filled.CloudOff
 
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -145,6 +148,33 @@ fun AddExpenseScreen(
                 ) {
                     Text("Add Expense", style = MaterialTheme.typography.titleLarge, color = Black)
                     Text("Register a new expense", style = MaterialTheme.typography.bodyMedium, color = Black)
+                }
+            }
+            // ========== OFFLINE BANNER ========== (ADD IT HERE!)
+            item {
+                if (uiState.isOfflineMode) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3CD)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Filled.CloudOff,
+                                contentDescription = null,
+                                tint = Color(0xFFFF9800)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "You're offline. Changes will be saved and synced when you're back online.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color(0xFF856404)
+                            )
+                        }
+                    }
                 }
             }
 

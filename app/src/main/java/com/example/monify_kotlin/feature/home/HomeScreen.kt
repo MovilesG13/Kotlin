@@ -15,12 +15,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.MonetizationOn
 import androidx.compose.material.icons.outlined.PhoneIphone
+import androidx.compose.material.icons.outlined.Receipt
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -36,21 +42,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.monify_kotlin.core.navigation.Routes
 import com.example.monify_kotlin.core.ui.BottomBar
 import com.example.monify_kotlin.core.ui.SpeedDialFab
 import com.example.monify_kotlin.core.ui.formatMoney
 import com.example.monify_kotlin.data.Goal
+import com.example.monify_kotlin.data.cache.AppDatabase
 import com.example.monify_kotlin.feature.home.HomeViewModel
+import com.example.monify_kotlin.feature.home.TransactionType
+import com.example.monify_kotlin.feature.home.TransactionUiModel
+import com.example.monify_kotlin.feature.home.WeeklyTransactions
 import com.example.monify_kotlin.ui.theme.Blue
 import com.example.monify_kotlin.ui.theme.Green
 import com.example.monify_kotlin.ui.theme.LightBlue
 import com.example.monify_kotlin.ui.theme.Red
 import com.example.monify_kotlin.ui.theme.SkyBlue
+import java.time.format.DateTimeFormatter
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -60,10 +73,13 @@ fun HomeScreen(
     onAddExpense: () -> Unit,
     onGoReports: () -> Unit = {},
 ) {
+    val context = LocalContext.current
     val vm: HomeViewModel = viewModel()
     val ui = vm.state.value
 
+    // Initialize database in ViewModel
     LaunchedEffect(Unit) {
+        vm.setDatabase(AppDatabase.getDatabase(context))
         vm.load()
     }
 
@@ -78,34 +94,48 @@ fun HomeScreen(
         },
         floatingActionButton = { SpeedDialFab(onAddIncome, onAddExpense) }
     ) { padding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
+                .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            BalanceHeader(
-                name = ui.name,
-                month = ui.monthLabel,
-                balance = "$ ${ui.balance.formatMoney()}"
-            )
+            item { Spacer(Modifier.height(0.dp)) }
 
-            FinancialOverviewCard(
-                income = ui.income.toFloat(),
-                expenses = ui.expenses.toFloat(),
-                balance = ui.balance.toFloat(),
-                isLoading = ui.loading,
-                error = ui.error
-            )
+            item {
+                BalanceHeader(
+                    name = ui.name,
+                    month = ui.monthLabel,
+                    balance = "$ ${ui.balance.formatMoney()}"
+                )
+            }
 
-            SavingGoalsCard(goals = ui.goals)
+            item {
+                FinancialOverviewCard(
+                    income = ui.income.toFloat(),
+                    expenses = ui.expenses.toFloat(),
+                    balance = ui.balance.toFloat(),
+                    isLoading = ui.loading,
+                    error = ui.error
+                )
+            }
+
+            item {
+                SavingGoalsCard(goals = ui.goals)
+            }
+
+            // Weekly Transactions Section
+            items(ui.weeklyTransactions) { weeklyTxn ->
+                WeeklyTransactionsCard(weeklyTransactions = weeklyTxn)
+            }
+
+            item { Spacer(Modifier.height(16.dp)) }
         }
     }
 }
 
-/* -------------------- Header de Balance -------------------- */
-
+/* -------------------- Balance Header -------------------- */
 @Composable
 private fun BalanceHeader(name: String, month: String, balance: String) {
     Card(
@@ -153,8 +183,7 @@ private fun BalanceHeader(name: String, month: String, balance: String) {
     }
 }
 
-/* -------------------- Resumen Financiero (gráfico simulado) -------------------- */
-
+/* -------------------- Financial Overview -------------------- */
 @Composable
 private fun FinancialOverviewCard(income: Float, expenses: Float, balance: Float, isLoading: Boolean, error: String?) {
     Card(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
@@ -240,7 +269,6 @@ private fun BarChart(bars: List<Bar>, maxY: Float, gridLines: Int = 4) {
 }
 
 /* -------------------- Saving Goals -------------------- */
-
 @Composable
 private fun SavingGoalsCard(goals: List<Goal>) {
     Card(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
@@ -293,5 +321,174 @@ private fun GoalRow(goal: Goal) {
             trackColor = SkyBlue,
             color = LightBlue
         )
+    }
+}
+
+/* -------------------- Weekly Transactions -------------------- */
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+private fun WeeklyTransactionsCard(weeklyTransactions: WeeklyTransactions) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Header
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Receipt,
+                    contentDescription = null,
+                    tint = Blue
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    weeklyTransactions.weekLabel,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            }
+
+            // Transactions
+            if (weeklyTransactions.transactions.isEmpty()) {
+                Text(
+                    "No transactions this week",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Gray,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            } else {
+                weeklyTransactions.transactions.forEach { transaction ->
+                    TransactionRow(transaction)
+                }
+            }
+        }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+private fun TransactionRow(transaction: TransactionUiModel) {
+    val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+    val dateFormatter = DateTimeFormatter.ofPattern("MMM dd")
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                if (transaction.type == TransactionType.EXPENSE)
+                    Red.copy(alpha = 0.08f)
+                else
+                    Green.copy(alpha = 0.08f)
+            )
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Transaction Icon
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(
+                    if (transaction.type == TransactionType.EXPENSE)
+                        Red.copy(alpha = 0.15f)
+                    else
+                        Green.copy(alpha = 0.15f)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = if (transaction.type == TransactionType.EXPENSE)
+                    Icons.Outlined.Receipt
+                else
+                    Icons.Outlined.MonetizationOn,
+                contentDescription = null,
+                tint = if (transaction.type == TransactionType.EXPENSE) Red else Green,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        Spacer(Modifier.width(12.dp))
+
+        // Transaction Details
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = transaction.description,
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                maxLines = 1
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = transaction.category.replaceFirstChar { it.uppercase() },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+                Text("•", color = Color.Gray, fontSize = 8.sp)
+                Text(
+                    text = transaction.dateTime.format(dateFormatter),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+                Text("•", color = Color.Gray, fontSize = 8.sp)
+                Text(
+                    text = transaction.dateTime.format(timeFormatter),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+            }
+        }
+
+        Spacer(Modifier.width(8.dp))
+
+        // Amount and Sync Status
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = "${if (transaction.type == TransactionType.EXPENSE) "-" else "+"}$${transaction.amount.formatMoney()}",
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                color = if (transaction.type == TransactionType.EXPENSE) Red else Green
+            )
+
+            // Sync Status Icon
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                if (transaction.isSynced) {
+                    Icon(
+                        imageVector = Icons.Filled.CheckCircle,
+                        contentDescription = "Synced",
+                        tint = Green,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "Synced",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Green,
+                        fontSize = 10.sp
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "Not Synced",
+                        tint = Color(0xFFFF9800),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "Pending",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFFF9800),
+                        fontSize = 10.sp
+                    )
+                }
+            }
+        }
     }
 }

@@ -1,14 +1,22 @@
 package com.example.monify_kotlin.feature.transactions.ui
 
+import android.app.Application
 import android.net.Uri
 import android.os.Build
+import android.util.ArrayMap
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.monify_kotlin.core.util.ConnectivityObserver
 import com.example.monify_kotlin.data.ExpenseRepository
+import com.example.monify_kotlin.data.cache.AppDatabase
+import com.example.monify_kotlin.data.cache.ImageCacheManager
+import com.example.monify_kotlin.data.cache.PendingExpense
+import com.example.monify_kotlin.data.sync.TransactionSyncWorker
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -25,41 +33,74 @@ data class AddExpenseUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val success: Boolean = false,
-    val successMessage: String? = null
+    val successMessage: String? = null,
+    val isConnected: Boolean = true,
+    val isOfflineMode: Boolean = false
 )
 
 class AddExpenseViewModel(
-    private val repository: ExpenseRepository = ExpenseRepository()
-) : ViewModel() {
+    application: Application
+) : AndroidViewModel(application) {
+
+    private val repository = ExpenseRepository()
+    private val database = AppDatabase.getDatabase(application)
+    private val imageCacheManager = ImageCacheManager(application)
+    private val connectivityObserver = ConnectivityObserver(application)
+
+    // ArrayMap cache for storing expense metadata
+    private val expenseCache = ArrayMap<String, Any>()
 
     var uiState by mutableStateOf(AddExpenseUiState())
         private set
 
+    init {
+        observeConnectivity()
+    }
+
+    private fun observeConnectivity() {
+        viewModelScope.launch {
+            var wasOffline = false
+            connectivityObserver.isConnected.collect { isConnected ->
+                uiState = uiState.copy(
+                    isConnected = isConnected,
+                    isOfflineMode = !isConnected
+                )
+
+                // Trigger sync when coming back online
+                if (isConnected && wasOffline) {
+                    android.util.Log.d("AddExpenseViewModel", "Back online - triggering sync")
+                    TransactionSyncWorker.schedule(getApplication())
+                }
+                wasOffline = !isConnected
+            }
+        }
+    }
+
     fun updateAmount(value: String) {
-        // Solo permitir números y un punto decimal
         if (value.isEmpty() || value.matches(Regex("^\\d*\\.?\\d*$"))) {
             uiState = uiState.copy(amount = value, error = null)
+            expenseCache["amount"] = value
         }
     }
 
     fun updateDescription(value: String) {
         uiState = uiState.copy(description = value)
+        expenseCache["description"] = value
     }
 
     fun updateCategory(value: String) {
         uiState = uiState.copy(category = value)
+        expenseCache["category"] = value
     }
 
     fun updateNotes(value: String) {
         uiState = uiState.copy(notes = value)
+        expenseCache["notes"] = value
     }
 
     fun updateDate(value: LocalDate?) {
         uiState = uiState.copy(date = value, error = null)
-    }
-
-    fun updateReceiptImage(uri: Uri?) {
-        uiState = uiState.copy(receiptImageUri = uri)
+        value?.let { expenseCache["date"] = it }
     }
 
     fun uploadReceiptImage(imageUri: Uri) {
@@ -67,46 +108,53 @@ class AddExpenseViewModel(
 
         viewModelScope.launch {
             try {
-                val imageUrl = repository.uploadReceiptImage(imageUri)
-                uiState = uiState.copy(
-                    isUploadingImage = false,
-                    receiptImageUrl = imageUrl,
-                    receiptImageUri = imageUri
-                )
+                if (uiState.isConnected) {
+                    // Online: Upload to Firebase
+                    val imageUrl = repository.uploadReceiptImage(imageUri)
+                    uiState = uiState.copy(
+                        isUploadingImage = false,
+                        receiptImageUrl = imageUrl,
+                        receiptImageUri = imageUri
+                    )
+                } else {
+                    // Offline: Save locally
+                    val localPath = imageCacheManager.saveImageLocally(getApplication(), imageUri)
+                    uiState = uiState.copy(
+                        isUploadingImage = false,
+                        receiptImageUri = imageUri
+                    )
+                    expenseCache["receiptLocalPath"] = localPath
+                }
             } catch (e: Exception) {
                 uiState = uiState.copy(
                     isUploadingImage = false,
-                    error = "Failed to upload image: ${e.message}"
+                    error = "Failed to process image: ${e.message}"
                 )
             }
         }
     }
 
     fun removeReceiptImage() {
+        expenseCache["receiptLocalPath"]?.let { path ->
+            imageCacheManager.deleteImage(path as String)
+        }
         uiState = uiState.copy(
             receiptImageUri = null,
             receiptImageUrl = null
         )
+        expenseCache.remove("receiptLocalPath")
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun saveExpense() {
-        // Validar amount
         val amount = uiState.amount.toDoubleOrNull()
         if (amount == null || amount <= 0) {
             uiState = uiState.copy(error = "Please enter a valid amount")
             return
         }
 
-        // Validar fecha
         if (uiState.date == null) {
             uiState = uiState.copy(error = "Please select a date")
-            return
-        }
-
-        // Si hay una imagen pero no se ha subido, subirla primero
-        if (uiState.receiptImageUri != null && uiState.receiptImageUrl == null) {
-            uiState = uiState.copy(error = "Please wait while the receipt image is uploading")
             return
         }
 
@@ -114,56 +162,59 @@ class AddExpenseViewModel(
 
         viewModelScope.launch {
             try {
-                // Convertir la fecha a formato ISO 8601
                 val dateString = uiState.date!!.atStartOfDay()
                     .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
 
-                repository.createExpense(
-                    amount = amount,
-                    currency = "USD",
-                    categoryId = uiState.category.lowercase(),
-                    description = if (uiState.description.isNotBlank()) uiState.description else null,
-                    note = if (uiState.notes.isNotBlank()) uiState.notes else null,
-                    date = dateString,
-                    receiptImageUrl = uiState.receiptImageUrl
-                )
+                if (uiState.isConnected) {
+                    // Online: Save directly to Firebase
+                    repository.createExpense(
+                        amount = amount,
+                        currency = "USD",
+                        categoryId = uiState.category.lowercase(),
+                        description = if (uiState.description.isNotBlank()) uiState.description else null,
+                        note = if (uiState.notes.isNotBlank()) uiState.notes else null,
+                        date = dateString,
+                        receiptImageUrl = uiState.receiptImageUrl
+                    )
 
-                uiState = uiState.copy(
-                    isLoading = false,
-                    success = true,
-                    successMessage = "Expense saved successfully!"
-                )
-            } catch (e: Exception) {
-                val errorMessage = when {
-                    e.message?.contains("UNAUTHENTICATED") == true -> "Please log in to save expenses"
-                    e.message?.contains("INVALID_ARGS") == true -> "Invalid expense data. Please check all fields"
-                    e.message?.contains("network", ignoreCase = true) == true -> "Network error. Please check your connection"
-                    e.message?.contains("INTERNAL") == true -> "Expense saved! Returning to home..."
-                    else -> "Error: ${e.message ?: "Unknown error"}"
-                }
-
-                // Si el error es INTERNAL, probablemente se guardó exitosamente
-                if (e.message?.contains("INTERNAL") == true) {
                     uiState = uiState.copy(
                         isLoading = false,
                         success = true,
                         successMessage = "Expense saved successfully!"
                     )
                 } else {
+                    // Offline: Save to local database
+                    val pendingExpense = PendingExpense(
+                        amount = amount,
+                        currency = "USD",
+                        categoryId = uiState.category.lowercase(),
+                        description = if (uiState.description.isNotBlank()) uiState.description else null,
+                        note = if (uiState.notes.isNotBlank()) uiState.notes else null,
+                        date = dateString,
+                        receiptImageLocalPath = expenseCache["receiptLocalPath"] as? String,
+                        receiptImageUrl = uiState.receiptImageUrl
+                    )
+
+                    database.pendingExpenseDao().insert(pendingExpense)
+
                     uiState = uiState.copy(
                         isLoading = false,
-                        error = errorMessage
+                        success = true,
+                        successMessage = "Expense saved offline. Will sync when online."
                     )
                 }
+
+                expenseCache.clear()
+            } catch (e: Exception) {
+                uiState = uiState.copy(
+                    isLoading = false,
+                    error = "Error: ${e.message ?: "Unknown error"}"
+                )
             }
         }
     }
 
     fun clearError() {
         uiState = uiState.copy(error = null)
-    }
-
-    fun resetState() {
-        uiState = AddExpenseUiState()
     }
 }

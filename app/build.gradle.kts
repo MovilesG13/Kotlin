@@ -70,6 +70,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.navigation.compose)
     implementation(libs.androidx.runtime)
+    implementation(libs.androidx.media3.common.ktx)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

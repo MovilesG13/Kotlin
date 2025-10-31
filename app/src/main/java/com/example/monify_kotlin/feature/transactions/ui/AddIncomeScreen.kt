@@ -16,15 +16,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.monify_kotlin.feature.transactions.AddIncomeViewModel
+import com.example.monify_kotlin.feature.transactions.ui.AddIncomeViewModel
 import com.example.monify_kotlin.ui.theme.*
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+
+import androidx.compose.material.icons.filled.CloudOff
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -103,6 +106,32 @@ fun AddIncomeScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = Black
                 )
+            }
+
+            // ========== OFFLINE BANNER ========== (ADD IT HERE!)
+            if (uiState.isOfflineMode) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3CD)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Filled.CloudOff,
+                            contentDescription = null,
+                            tint = Color(0xFFFF9800)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "You're offline. Changes will be saved and synced when you're back online.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFF856404)
+                        )
+                    }
+                }
             }
 
             Card(shape = RoundedCornerShape(20.dp)) {
