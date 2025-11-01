@@ -112,6 +112,9 @@ dependencies {
     implementation("com.google.firebase:firebase-appcheck-playintegrity:17.1.2")
 
     implementation("com.google.firebase:firebase-appcheck-debug:17.1.2")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-tasks:1.8.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.0")
 }
 
 
