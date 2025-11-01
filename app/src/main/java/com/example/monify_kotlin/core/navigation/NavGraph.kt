@@ -27,6 +27,7 @@ object Routes {
     const val REPORTS = "reports"
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
