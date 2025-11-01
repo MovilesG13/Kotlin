@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.lang.Exception
 
 data class AuthUiState(
     val loading: Boolean = false,
@@ -55,7 +56,7 @@ class LoginViewModel(
         }
     }
 
-    fun signIn(email: String, pass: String) {
+    suspend fun signIn(email: String, pass: String) {
         if (!_state.value.isConnected) {
             _state.value = _state.value.copy(
                 error = "No internet connection. Please connect to log in."
@@ -77,7 +78,10 @@ class LoginViewModel(
         }
     }
 
-    fun signUp(email: String, pass: String) {
+
+
+    // ... dentro de LoginViewModel
+    fun signUp(name: String, email: String, pass: String) { // <-- (1) Añadir name
         if (!_state.value.isConnected) {
             _state.value = _state.value.copy(
                 error = "No internet connection. Please connect to sign up."
@@ -88,7 +92,11 @@ class LoginViewModel(
         _state.value = _state.value.copy(loading = true, error = null)
         viewModelScope.launch {
             try {
+                // (2) Primero crea el usuario
                 repo.signUp(email, pass)
+                // (3) Luego actualiza su nombre
+                repo.updateProfileName(name)
+
                 _state.value = AuthUiState(loggedIn = true, isConnected = _state.value.isConnected)
             } catch (e: Exception) {
                 _state.value = _state.value.copy(

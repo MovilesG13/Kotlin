@@ -1,5 +1,6 @@
 package com.example.monify_kotlin.feature.login.ui
 
+import android.app.Application // <-- (1) Importar
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -11,12 +12,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext // <-- (2) Importar
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModelProvider // <-- (3) Importar
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.monify_kotlin.R
@@ -29,7 +32,16 @@ fun SignUpScreen(
     navController: NavController,
     onSignUpSuccess: () -> Unit
 ) {
-    val vm: LoginViewModel = viewModel()
+    // --- (4) INICIO DE LA CORRECCIÓN ---
+    // Necesitamos el contexto para crear la "fábrica" de AndroidViewModel
+    val context = LocalContext.current
+    val factory = ViewModelProvider.AndroidViewModelFactory.getInstance(
+        context.applicationContext as Application
+    )
+    // Ahora creamos el ViewModel usando esa fábrica
+    val vm: LoginViewModel = viewModel(factory = factory)
+    // --- FIN DE LA CORRECCIÓN ---
+
     val ui by vm.state.collectAsState()
 
     var name by remember { mutableStateOf("") }
@@ -117,9 +129,9 @@ fun SignUpScreen(
             Spacer(Modifier.height(24.dp))
             Button(
                 onClick = {
-                    if (email.isNotBlank() && password.length >= 6) {
-                        vm.signUp(email.trim(), password)
-                        // name lo puedes persistir con tu callable updateProfile más tarde
+                    // (5) CAMBIO AQUÍ: Ahora también pasamos el nombre
+                    if (name.isNotBlank() && email.isNotBlank() && password.length >= 6) {
+                        vm.signUp(name.trim(), email.trim(), password)
                     }
                 },
                 modifier = Modifier
