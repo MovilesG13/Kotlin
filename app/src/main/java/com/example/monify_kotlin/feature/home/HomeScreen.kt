@@ -53,8 +53,11 @@ import com.example.monify_kotlin.core.ui.BottomBar
 import com.example.monify_kotlin.core.ui.SpeedDialFab
 import com.example.monify_kotlin.core.ui.formatMoney
 import com.example.monify_kotlin.data.Goal
+import com.example.monify_kotlin.data.GoalsRepository
+import com.example.monify_kotlin.data.HomeRepository
 import com.example.monify_kotlin.data.cache.AppDatabase
 import com.example.monify_kotlin.feature.home.HomeViewModel
+import com.example.monify_kotlin.feature.home.HomeViewModelFactory
 import com.example.monify_kotlin.feature.home.TransactionType
 import com.example.monify_kotlin.feature.home.TransactionUiModel
 import com.example.monify_kotlin.feature.home.WeeklyTransactions
@@ -73,13 +76,18 @@ fun HomeScreen(
     onAddExpense: () -> Unit,
     onGoReports: () -> Unit = {},
 ) {
+    // --- Dependency Injection Setup ---
     val context = LocalContext.current
-    val vm: HomeViewModel = viewModel()
+    val db = AppDatabase.getDatabase(context)
+    val homeRepo = HomeRepository()
+    val goalsRepo = GoalsRepository(db.goalDao())
+    val factory = HomeViewModelFactory(homeRepo, goalsRepo, db)
+    val vm: HomeViewModel = viewModel(factory = factory)
+    // --- End of DI Setup ---
+
     val ui = vm.state.value
 
-    // Initialize database in ViewModel
     LaunchedEffect(Unit) {
-        vm.setDatabase(AppDatabase.getDatabase(context))
         vm.load()
     }
 
@@ -370,125 +378,31 @@ private fun WeeklyTransactionsCard(weeklyTransactions: WeeklyTransactions) {
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 private fun TransactionRow(transaction: TransactionUiModel) {
-    val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-    val dateFormatter = DateTimeFormatter.ofPattern("MMM dd")
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(
-                if (transaction.type == TransactionType.EXPENSE)
-                    Red.copy(alpha = 0.08f)
-                else
-                    Green.copy(alpha = 0.08f)
-            )
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Transaction Icon
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(
-                    if (transaction.type == TransactionType.EXPENSE)
-                        Red.copy(alpha = 0.15f)
-                    else
-                        Green.copy(alpha = 0.15f)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = if (transaction.type == TransactionType.EXPENSE)
-                    Icons.Outlined.Receipt
-                else
-                    Icons.Outlined.MonetizationOn,
-                contentDescription = null,
-                tint = if (transaction.type == TransactionType.EXPENSE) Red else Green,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        val icon = if (transaction.type == TransactionType.INCOME) Icons.Default.CheckCircle else Icons.Default.Close
+        val color = if (transaction.type == TransactionType.INCOME) Green else Red
+        Icon(imageVector = icon, contentDescription = null, tint = color)
         Spacer(Modifier.width(12.dp))
-
-        // Transaction Details
         Column(Modifier.weight(1f)) {
             Text(
-                text = transaction.description,
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-                maxLines = 1
+                transaction.description,
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
             )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = transaction.category.replaceFirstChar { it.uppercase() },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
-                Text("•", color = Color.Gray, fontSize = 8.sp)
-                Text(
-                    text = transaction.dateTime.format(dateFormatter),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
-                Text("•", color = Color.Gray, fontSize = 8.sp)
-                Text(
-                    text = transaction.dateTime.format(timeFormatter),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
-            }
-        }
-
-        Spacer(Modifier.width(8.dp))
-
-        // Amount and Sync Status
-        Column(horizontalAlignment = Alignment.End) {
             Text(
-                text = "${if (transaction.type == TransactionType.EXPENSE) "-" else "+"}$${transaction.amount.formatMoney()}",
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                color = if (transaction.type == TransactionType.EXPENSE) Red else Green
+                transaction.category,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.Gray
             )
-
-            // Sync Status Icon
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                if (transaction.isSynced) {
-                    Icon(
-                        imageVector = Icons.Filled.CheckCircle,
-                        contentDescription = "Synced",
-                        tint = Green,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = "Synced",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Green,
-                        fontSize = 10.sp
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Filled.Close,
-                        contentDescription = "Not Synced",
-                        tint = Color(0xFFFF9800),
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = "Pending",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFFFF9800),
-                        fontSize = 10.sp
-                    )
-                }
-            }
         }
+        if (!transaction.isSynced) {
+            Icon(Icons.Default.Sync, contentDescription = "Pending Sync", tint = Color.Gray, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(8.dp))
+        }
+        Text(
+            text = "$${transaction.amount.formatMoney()}",
+            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold, color = color)
+        )
     }
 }

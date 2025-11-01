@@ -3,6 +3,7 @@ package com.example.monify_kotlin.feature.home
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.monify_kotlin.data.Goal
 import com.example.monify_kotlin.data.GoalsRepository
@@ -32,16 +33,18 @@ data class HomeUiState(
 )
 
 class HomeViewModel(
-    private val repo: HomeRepository = HomeRepository(),
-    private val goalsRepo: GoalsRepository = GoalsRepository(),
-    private var database: AppDatabase? = null
+    private val repo: HomeRepository,
+    private val goalsRepo: GoalsRepository,
+    private val database: AppDatabase
 ) : ViewModel() {
 
     var state = androidx.compose.runtime.mutableStateOf(HomeUiState())
         private set
 
-    fun setDatabase(db: AppDatabase) {
-        database = db
+    init {
+        viewModelScope.launch {
+            goalsRepo.refreshGoals()
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -52,7 +55,7 @@ class HomeViewModel(
                 val ym = "%04d-%02d".format(today.year, today.monthValue)
                 val name = repo.getProfileName()
                 val (inc, exp, bal) = repo.getMonthlySummary(ym)
-                val goals = goalsRepo.getGoals()
+                val goals = goalsRepo.goals.first()
 
                 // Load transactions
                 val weeklyTxns = loadWeeklyTransactions()
@@ -75,20 +78,18 @@ class HomeViewModel(
 
     @RequiresApi(Build.VERSION_CODES.O)
     private suspend fun loadWeeklyTransactions(): List<WeeklyTransactions> {
-        val db = database ?: return emptyList()
-
         val allTransactions = mutableListOf<TransactionUiModel>()
 
         // Load synced transactions
-        val syncedTxns = db.syncedTransactionDao().getAllTransactions().first()
+        val syncedTxns = database.syncedTransactionDao().getAllTransactions().first()
         allTransactions.addAll(syncedTxns.map { it.toUiModel() })
 
         // Load pending expenses (unsynced)
-        val pendingExpenses = db.pendingExpenseDao().getUnsyncedExpenses().first()
+        val pendingExpenses = database.pendingExpenseDao().getUnsyncedExpenses().first()
         allTransactions.addAll(pendingExpenses.map { it.toUiModel() })
 
         // Load pending incomes (unsynced)
-        val pendingIncomes = db.pendingIncomeDao().getUnsyncedIncomes().first()
+        val pendingIncomes = database.pendingIncomeDao().getUnsyncedIncomes().first()
         allTransactions.addAll(pendingIncomes.map { it.toUiModel() })
 
         // Group by week
@@ -141,6 +142,20 @@ class HomeViewModel(
         val lastWeek = LocalDate.now().minusWeeks(1)
         val weekField = WeekFields.of(Locale.getDefault()).weekOfWeekBasedYear()
         return date.year == lastWeek.year && date.get(weekField) == lastWeek.get(weekField)
+    }
+}
+
+class HomeViewModelFactory(
+    private val homeRepository: HomeRepository,
+    private val goalsRepository: GoalsRepository,
+    private val database: AppDatabase
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(HomeViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return HomeViewModel(homeRepository, goalsRepository, database) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
 
