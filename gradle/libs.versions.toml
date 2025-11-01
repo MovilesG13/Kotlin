@@ -16,6 +16,7 @@ lifecycleViewmodelCompose = "2.9.4"
 kotlinxCoroutinesPlayServices = "1.9.0"
 navigationCompose = "2.8.3"
 runtime = "1.9.2"
+room = "2.6.1"
 
 ksp = "2.0.21-1.0.27"
 media3CommonKtx = "1.8.0"
@@ -37,6 +38,11 @@ androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
 androidx-ui-unit = { group = "androidx.compose.ui", name = "ui-unit", version.ref = "uiUnit" }
+
+# Room
+androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 
 # Firebase (sin version: usa BOM en el módulo)
 firebase-auth-ktx = { module = "com.google.firebase:firebase-auth-ktx" }
@@ -62,4 +68,3 @@ kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 google-services = { id = "com.google.gms.google-services", version = "4.4.3" }
 kotlin-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp"}
-

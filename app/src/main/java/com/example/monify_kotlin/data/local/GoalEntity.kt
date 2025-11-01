@@ -5,7 +5,8 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "goals")
 data class GoalEntity(
-    @PrimaryKey val id: String,
+    @PrimaryKey
+    val id: String,
     val title: String,
     val currentAmount: Double,
     val targetAmount: Double,

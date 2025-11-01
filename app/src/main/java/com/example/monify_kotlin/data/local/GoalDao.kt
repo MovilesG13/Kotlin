@@ -9,12 +9,9 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface GoalDao {
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(goals: List<GoalEntity>)
-
     @Query("SELECT * FROM goals")
     fun getGoals(): Flow<List<GoalEntity>>
 
-    @Query("DELETE FROM goals")
-    suspend fun deleteAll()
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(goals: List<GoalEntity>)
 }
