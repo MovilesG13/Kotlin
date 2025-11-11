@@ -15,6 +15,7 @@ class MonifyApplication : Application() {
         FirebaseApp.initializeApp(this)
 
         // 2. Initialize App Check
+        /*
         val firebaseAppCheck = FirebaseAppCheck.getInstance()
 
         // 3. (ESTE ES EL CAMBIO)
@@ -31,5 +32,6 @@ class MonifyApplication : Application() {
                 PlayIntegrityAppCheckProviderFactory.getInstance()
             )
         }
+         */
     }
 }

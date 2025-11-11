@@ -1,8 +1,14 @@
 package com.example.monify_kotlin.feature.home
 
+import android.app.Application
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import androidx.annotation.RequiresApi
-import androidx.lifecycle.ViewModel
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.monify_kotlin.data.Goal
 import com.example.monify_kotlin.data.GoalsRepository
@@ -11,7 +17,15 @@ import com.example.monify_kotlin.data.cache.AppDatabase
 import com.example.monify_kotlin.data.cache.PendingExpense
 import com.example.monify_kotlin.data.cache.PendingIncome
 import com.example.monify_kotlin.data.cache.SyncedTransaction
-import kotlinx.coroutines.flow.first
+import com.example.monify_kotlin.core.util.ConnectivityObserver
+import com.example.monify_kotlin.data.sync.TransactionSyncWorker
+
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -28,71 +42,198 @@ data class HomeUiState(
     val balance: Double = 0.0,
     val goals: List<Goal> = emptyList(),
     val weeklyTransactions: List<WeeklyTransactions> = emptyList(),
-    val error: String? = null
+    val error: String? = null,
+    val isSyncing: Boolean = false,
+    val hasPendingTransactions: Boolean = false,
+    val lastSyncTime: Long? = null
 )
 
 class HomeViewModel(
-    private val repo: HomeRepository = HomeRepository(),
-    private val goalsRepo: GoalsRepository = GoalsRepository(),
-    private var database: AppDatabase? = null
-) : ViewModel() {
+    application: Application,
+) : AndroidViewModel(application) {
 
-    var state = androidx.compose.runtime.mutableStateOf(HomeUiState())
-        private set
+    private val repo: HomeRepository = HomeRepository()
+    private val goalsRepo: GoalsRepository = GoalsRepository()
 
-    fun setDatabase(db: AppDatabase) {
-        database = db
+    private val database = AppDatabase.getDatabase(application)
+    private val connectivityObserver = ConnectivityObserver(application)
+
+    private val _state = MutableStateFlow(HomeUiState())
+    val state: StateFlow<HomeUiState> = _state.asStateFlow()
+
+    // BroadcastReceiver para escuchar cuando termina la sincronización
+    private val syncCompletedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == TransactionSyncWorker.SYNC_COMPLETED_ACTION) {
+                val syncedCount = intent.getIntExtra(TransactionSyncWorker.EXTRA_SYNCED_COUNT, 0)
+                android.util.Log.d("HomeViewModel", "📢 Received sync completed broadcast - Count: $syncedCount")
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    // Recargar el balance desde el backend
+                    refreshBalanceFromBackend()
+                }
+            }
+        }
     }
 
+    init {
+        // Registrar el BroadcastReceiver
+        val filter = IntentFilter(TransactionSyncWorker.SYNC_COMPLETED_ACTION)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            application.registerReceiver(syncCompletedReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            ContextCompat.registerReceiver(
+                application,
+                syncCompletedReceiver,
+                filter,
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            loadReactiveData()
+            observeConnectivity()
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // Desregistrar el BroadcastReceiver cuando el ViewModel se destruye
+        try {
+            getApplication<Application>().unregisterReceiver(syncCompletedReceiver)
+        } catch (e: Exception) {
+            android.util.Log.w("HomeViewModel", "Failed to unregister receiver", e)
+        }
+    }
+
+    /**
+     * Observa el estado de conectividad y recarga balance cuando vuelve online
+     */
     @RequiresApi(Build.VERSION_CODES.O)
-    fun load() {
+    private fun observeConnectivity() {
+        viewModelScope.launch {
+            var wasOffline = false
+            connectivityObserver.isConnected.collect { isConnected ->
+                // Cuando vuelve online después de estar offline, recargar balance
+                if (isConnected && wasOffline) {
+                    android.util.Log.d("HomeViewModel", "📡 Back online - reloading balance in 2 seconds")
+                    // Dar tiempo al Worker para sincronizar primero
+                    kotlinx.coroutines.delay(2000)
+                    refreshBalanceFromBackend()
+                }
+                wasOffline = !isConnected
+            }
+        }
+    }
+
+    /**
+     * Carga datos reactivos combinando las 3 tablas de Room
+     */
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun loadReactiveData() {
+        android.util.Log.d("HomeViewModel", "🚀 Starting reactive data loading")
+
+        val syncedFlow = database.syncedTransactionDao().getAllTransactions()
+        val pendingExpensesFlow = database.pendingExpenseDao().getUnsyncedExpenses()
+        val pendingIncomesFlow = database.pendingIncomeDao().getUnsyncedIncomes()
+
         viewModelScope.launch {
             try {
+                // Cargar datos remotos iniciales
                 val today = LocalDate.now()
                 val ym = "%04d-%02d".format(today.year, today.monthValue)
                 val name = repo.getProfileName()
                 val (inc, exp, bal) = repo.getMonthlySummary(ym)
                 val goals = goalsRepo.getGoals()
 
-                // Load transactions
-                val weeklyTxns = loadWeeklyTransactions()
+                android.util.Log.d("HomeViewModel", "💰 Initial balance: $bal (Income: $inc, Expenses: $exp)")
 
-                state.value = HomeUiState(
-                    loading = false,
-                    name = name,
-                    monthLabel = today.month.name.lowercase().replaceFirstChar { it.titlecase() },
-                    income = inc,
-                    expenses = exp,
-                    balance = bal,
-                    goals = goals,
-                    weeklyTransactions = weeklyTxns
-                )
+
+                combine(syncedFlow, pendingExpensesFlow, pendingIncomesFlow) { synced, pendingExp, pendingInc ->
+                    val allTransactions = mutableListOf<TransactionUiModel>()
+                    allTransactions.addAll(synced.map { it.toUiModel() })
+                    allTransactions.addAll(pendingExp.map { it.toUiModel() })
+                    allTransactions.addAll(pendingInc.map { it.toUiModel() })
+
+                    android.util.Log.d("HomeViewModel", "📊 Transactions updated - Synced: ${synced.size}, Pending Expenses: ${pendingExp.size}, Pending Incomes: ${pendingInc.size}")
+
+                    val weeklyTxns = groupTransactionsByWeek(allTransactions)
+                    val hasPending = pendingExp.isNotEmpty() || pendingInc.isNotEmpty()
+
+                    _state.value.copy(
+                        loading = false,
+                        name = name,
+                        monthLabel = today.month.name.lowercase().replaceFirstChar { it.titlecase() },
+                        income = inc,
+                        expenses = exp,
+                        balance = bal,
+                        goals = goals,
+                        weeklyTransactions = weeklyTxns,
+                        hasPendingTransactions = hasPending
+                    )
+                }
+                    .catch { e ->
+                        android.util.Log.e("HomeViewModel", "❌ Error in data flow", e)
+                        _state.update { it.copy(
+                            loading = false,
+                            error = e.message ?: "Error loading transactions"
+                        ) }
+                    }
+                    .collect { updatedState ->
+                        _state.value = updatedState
+                    }
+
             } catch (e: Exception) {
-                state.value = state.value.copy(loading = false, error = e.message ?: "Error")
+                android.util.Log.e("HomeViewModel", "❌ Error loading initial data", e)
+                _state.update { it.copy(
+                    loading = false,
+                    error = e.message ?: "Error loading summary"
+                ) }
             }
         }
     }
 
+    /**
+     * CRÍTICO: Recarga el balance desde el backend después de sincronizar
+     */
     @RequiresApi(Build.VERSION_CODES.O)
-    private suspend fun loadWeeklyTransactions(): List<WeeklyTransactions> {
-        val db = database ?: return emptyList()
+    fun refreshBalanceFromBackend() {
+        viewModelScope.launch {
+            try {
+                android.util.Log.d("HomeViewModel", "🔄 Refreshing balance from backend...")
+                _state.update { it.copy(isSyncing = true) }
 
-        val allTransactions = mutableListOf<TransactionUiModel>()
+                val today = LocalDate.now()
+                val ym = "%04d-%02d".format(today.year, today.monthValue)
+                val (inc, exp, bal) = repo.getMonthlySummary(ym)
+                val goals = goalsRepo.getGoals()
 
-        // Load synced transactions
-        val syncedTxns = db.syncedTransactionDao().getAllTransactions().first()
-        allTransactions.addAll(syncedTxns.map { it.toUiModel() })
+                android.util.Log.d("HomeViewModel", "✅ Balance refreshed: $bal (Income: $inc, Expenses: $exp)")
 
-        // Load pending expenses (unsynced)
-        val pendingExpenses = db.pendingExpenseDao().getUnsyncedExpenses().first()
-        allTransactions.addAll(pendingExpenses.map { it.toUiModel() })
+                _state.update {
+                    it.copy(
+                        income = inc,
+                        expenses = exp,
+                        balance = bal,
+                        goals = goals,
+                        isSyncing = false,
+                        lastSyncTime = System.currentTimeMillis()
+                    )
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("HomeViewModel", "❌ Error refreshing balance", e)
+                _state.update { it.copy(isSyncing = false) }
+            }
+        }
+    }
 
-        // Load pending incomes (unsynced)
-        val pendingIncomes = db.pendingIncomeDao().getUnsyncedIncomes().first()
-        allTransactions.addAll(pendingIncomes.map { it.toUiModel() })
-
-        // Group by week
-        return groupTransactionsByWeek(allTransactions)
+    /**
+     * Fuerza una sincronización inmediata (para botón de refresh manual)
+     */
+    fun forceSyncNow() {
+        android.util.Log.d("HomeViewModel", "⚡ Force sync requested")
+        TransactionSyncWorker.scheduleImmediate(getApplication())
+        _state.update { it.copy(isSyncing = true) }
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -144,7 +285,7 @@ class HomeViewModel(
     }
 }
 
-// Extension functions to convert to UI models
+// Extension functions
 @RequiresApi(Build.VERSION_CODES.O)
 private fun SyncedTransaction.toUiModel() = TransactionUiModel(
     id = id,
@@ -186,6 +327,7 @@ private fun PendingIncome.toUiModel() = TransactionUiModel(
     isSynced = false,
     dateTime = LocalDateTime.ofInstant(
         java.time.Instant.ofEpochMilli(timestamp),
-        ZoneId.systemDefault()
-    )
+        ZoneId.systemDefault())
 )
+
+

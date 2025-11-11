@@ -1,5 +1,3 @@
-
-
 plugins {
 
     alias(libs.plugins.android.application)
@@ -10,8 +8,6 @@ plugins {
     id("com.google.firebase.crashlytics") version "3.0.6"
 
     id("com.google.devtools.ksp")
-
-
 }
 
 android {
@@ -82,7 +78,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    // Firebase BOM + módulos (usando alias del catalog)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.analytics.ktx)
@@ -94,26 +89,22 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
 
-    // Para Coil (cargar imágenes)
     implementation("io.coil-kt:coil-compose:2.5.0")
 
-    // Para Accompanist Permissions
     implementation("com.google.accompanist:accompanist-permissions:0.32.0")
-
 
     implementation("androidx.work:work-runtime-ktx:2.9.0")
 
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
     implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")      // Para corutinas y Flow
+    implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
 
     implementation("com.google.firebase:firebase-appcheck-playintegrity:17.1.2")
 
     implementation("com.google.firebase:firebase-appcheck-debug:17.1.2")
 
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-tasks:1.8.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.0")
 }
 
