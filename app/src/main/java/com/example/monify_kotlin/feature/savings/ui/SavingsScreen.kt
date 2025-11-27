@@ -16,7 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -25,21 +24,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.monify_kotlin.core.navigation.Routes
 import com.example.monify_kotlin.core.ui.BottomBar
 import com.example.monify_kotlin.core.ui.formatMoney
-import com.example.monify_kotlin.data.GoalsRepository
-import com.example.monify_kotlin.data.local.AppDatabase
-import com.example.monify_kotlin.feature.savings.* 
+import com.example.monify_kotlin.feature.savings.SavingGoal
+import com.example.monify_kotlin.feature.savings.SavingsTab
+import com.example.monify_kotlin.feature.savings.SavingsViewModel
 import com.example.monify_kotlin.ui.theme.*
 
 @Composable
-fun SavingsScreen(onBackHome: () -> Unit) {
-    // --- Dependency Injection Setup ---
-    val context = LocalContext.current
-    val db = AppDatabase.getDatabase(context)
-    val repository = GoalsRepository(db.goalDao())
-    val factory = SavingsViewModelFactory(repository)
-    val vm: SavingsViewModel = viewModel(factory = factory)
-    // --- End of DI Setup ---
-
+fun SavingsScreen(onBackHome: () -> Unit, vm: SavingsViewModel = viewModel()) {
     val state = vm.uiState
 
     if (vm.showAddGoalDialog) {

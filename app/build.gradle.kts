@@ -1,5 +1,3 @@
-
-
 plugins {
 
     alias(libs.plugins.android.application)
@@ -11,7 +9,7 @@ plugins {
 
     id("com.google.devtools.ksp")
 
-
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.0.21"
 }
 
 android {
@@ -46,6 +44,16 @@ android {
     buildFeatures {
         compose = true
     }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+        // ¡ESTA LÍNEA ES LA CLAVE!
+        isCoreLibraryDesugaringEnabled = true
+    }
+
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
 }
 
 dependencies {
@@ -73,10 +81,6 @@ dependencies {
     implementation(libs.androidx.runtime)
 
     // Room
-    implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx)
-    ksp(libs.androidx.room.compiler)
-
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -86,7 +90,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    // Firebase BOM + módulos (usando alias del catalog)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.analytics.ktx)
@@ -98,32 +101,27 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
 
-    // Para Coil (cargar imágenes)
     implementation("io.coil-kt:coil-compose:2.5.0")
 
-    // Para Accompanist Permissions
     implementation("com.google.accompanist:accompanist-permissions:0.32.0")
-// Para WorkManager (usado en TransactionSyncWorker)
-    implementation("androidx.work:work-runtime-ktx:2.9.0")
-
 
     implementation("androidx.work:work-runtime-ktx:2.9.0")
 
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
     implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")      // Para corutinas y Flow
+    implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
 
     implementation("com.google.firebase:firebase-appcheck-playintegrity:17.1.2")
 
     implementation("com.google.firebase:firebase-appcheck-debug:17.1.2")
 
-    implementation("androidx.datastore:datastore-preferences:1.1.1")}
-
-
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-tasks:1.8.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.0")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+
+    coreLibraryDesugaring(libs.android.desugar.jdk.libs)
 }
 
 

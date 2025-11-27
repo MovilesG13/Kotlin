@@ -13,7 +13,7 @@ import com.example.monify_kotlin.data.local.GoalEntity
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
-    abstract fun goalDao(): GoalDao
+    //abstract fun goalDao(): GoalDao
     abstract fun pendingExpenseDao(): PendingExpenseDao
     abstract fun pendingIncomeDao(): PendingIncomeDao
     abstract fun syncedTransactionDao(): SyncedTransactionDao
