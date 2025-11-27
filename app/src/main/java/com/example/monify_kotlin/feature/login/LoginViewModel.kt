@@ -56,7 +56,7 @@ class LoginViewModel(
         }
     }
 
-    suspend fun signIn(email: String, pass: String) {
+    fun signIn(email: String, pass: String) {
         if (!_state.value.isConnected) {
             _state.value = _state.value.copy(
                 error = "No internet connection. Please connect to log in."
@@ -92,9 +92,9 @@ class LoginViewModel(
         _state.value = _state.value.copy(loading = true, error = null)
         viewModelScope.launch {
             try {
-                // (2) Primero crea el usuario
+                // (2) First it creates the user
                 repo.signUp(email, pass)
-                // (3) Luego actualiza su nombre
+                // (3) Then load the name of the user
                 repo.updateProfileName(name)
 
                 _state.value = AuthUiState(loggedIn = true, isConnected = _state.value.isConnected)

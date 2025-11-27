@@ -4,7 +4,6 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.example.monify_kotlin.feature.home.ui.HomeScreen
 import com.example.monify_kotlin.feature.login.ui.LoginScreen
 import com.example.monify_kotlin.feature.login.ui.MainLoginScreen
 import com.example.monify_kotlin.feature.login.ui.SignUpScreen
@@ -15,6 +14,7 @@ import com.example.monify_kotlin.feature.reports.ui.ReportsScreen
 import android.os.Build
 import androidx.compose.material3.Text
 import androidx.annotation.RequiresApi
+import com.example.monify_kotlin.feature.home.HomeScreen
 
 object Routes {
     const val MAIN_LOGIN = "main_login"

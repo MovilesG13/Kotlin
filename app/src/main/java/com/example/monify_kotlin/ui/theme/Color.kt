@@ -10,3 +10,8 @@ val Red       = Color(0xFFFA2E38) // #fa2e38  Gastos / alertas
 val Green     = Color(0xFF06C951) // #06c951  Ingresos / ok
 val White     = Color(0xFFFFFFFF) // #ffffff  Fondo principal
 val Black     = Color(0xFF000000) // #000000  Texto primario
+
+
+val Purple = Color(0xFFA7C7E7) // #E0BBE4
+
+val Orange = Color(0xFFFFCBA4) // #FFCBA4

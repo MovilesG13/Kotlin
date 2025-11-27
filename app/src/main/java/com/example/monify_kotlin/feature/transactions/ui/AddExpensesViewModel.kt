@@ -69,7 +69,7 @@ class AddExpenseViewModel(
                 // Trigger sync when coming back online
                 if (isConnected && wasOffline) {
                     android.util.Log.d("AddExpenseViewModel", "Back online - triggering sync")
-                    TransactionSyncWorker.schedule(getApplication())
+                    TransactionSyncWorker.scheduleImmediate(getApplication())
                 }
                 wasOffline = !isConnected
             }
@@ -206,14 +206,15 @@ class AddExpenseViewModel(
 
                 expenseCache.clear()
             } catch (e: Exception) {
+                android.util.Log.e("TransactionError", "Error saving expense", e)
+                e.printStackTrace()
                 uiState = uiState.copy(
                     isLoading = false,
-                    error = "Error: ${e.message ?: "Unknown error"}"
+                    error = "Error: ${e.message?: "Verifica el Logcat para el stack trace"}"
                 )
             }
         }
     }
-
     fun clearError() {
         uiState = uiState.copy(error = null)
     }

@@ -16,12 +16,14 @@ initializeApp();
 const db = getFirestore();
 
 /** =========================
- *  AUTH: onCreate (perfil + métricas)
- *  ========================= */
+ *  AUTH: onCreate (perfil + métricas)
+ *  ========================= */
 export const authOnCreate = functionsV1.auth.user().onCreate(async (user: UserRecord) => {
   const { uid, email } = user;
   const now = new Date();
-  await db.doc(`users/${uid}/profile`).set({
+  
+  // 1. Crear documento de perfil
+  await db.doc(`users/${uid}/profile/data`).set({ // CORRECCIÓN: Agregado /data
     displayName: null,
     email: email ?? null,
     currency: "USD",
@@ -29,13 +31,16 @@ export const authOnCreate = functionsV1.auth.user().onCreate(async (user: UserRe
     marketingOptIn: false,
     createdAt: now,
   });
-  await db.doc(`users/${uid}/metrics`).set({
+  
+  // 2. Crear documento de métricas (FALLO AQUÍ ANTES)
+  await db.doc(`users/${uid}/metrics/data`).set({ // CORRECCIÓN CLAVE: Agregado /data
     goalNearestId: null,
     goalNearestPct: 0,
     lastExpenseAt: null,
     lastIncomeAt: null,
   });
-//Crear categorías por defecto
+
+  // Crear categorías por defecto
   const defaultCategories = [
     { id: "food", name: "Food", icon: "🍔" },
     { id: "transport", name: "Transport", icon: "🚗" },
@@ -55,12 +60,14 @@ export const authOnCreate = functionsV1.auth.user().onCreate(async (user: UserRe
 
 
 /** =========================
- *  PROFILE
- *  ========================= */
+ *  PROFILE
+ *  ========================= */
 export const updateProfile = onCall(async (req) => {
   const uid = req.auth?.uid; if (!uid) throw new HttpsError("unauthenticated", "User must be logged in.");
   const { displayName, currency, locale, marketingOptIn } = req.data || {};
-  await db.doc(`users/${uid}/profile`).set({
+  
+  // 3. CORRECCIÓN: Apunta al documento /profile/data
+  await db.doc(`users/${uid}/profile/data`).set({
     ...(displayName !== undefined && { displayName }),
     ...(currency !== undefined && { currency }),
     ...(locale !== undefined && { locale }),
@@ -70,8 +77,8 @@ export const updateProfile = onCall(async (req) => {
 });
 
 /** =========================
- *  CATEGORY
- *  ========================= */
+ *  CATEGORY
+ *  ========================= */
 export const createCategory = onCall(async (req) => {
   const uid = req.auth?.uid; if (!uid) throw new HttpsError("unauthenticated", "User must be logged in.");
   const { name, parentId, icon } = req.data || {};
@@ -82,8 +89,8 @@ export const createCategory = onCall(async (req) => {
 });
 
 /** =========================
- *  EXPENSE
- *  ========================= */
+ *  EXPENSE
+ *  ========================= */
 export const createExpense = onCall(async (req) => {
   const uid = req.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "User must be logged in.");
@@ -112,7 +119,8 @@ export const createExpense = onCall(async (req) => {
       ts: timestamp
     });
 
-  await db.doc(`users/${uid}/metrics`).set({
+  // 4. CORRECCIÓN CLAVE: Apunta al documento /metrics/data
+  await db.doc(`users/${uid}/metrics/data`).set({
     lastExpenseAt: timestamp
   }, { merge: true });
 
@@ -121,8 +129,8 @@ export const createExpense = onCall(async (req) => {
 });
 
 /** =========================
- *  INCOME
- *  ========================= */
+ *  INCOME
+ *  ========================= */
 export const createIncome = onCall(async (req) => {
   const uid = req.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "User must be logged in.");
@@ -149,7 +157,8 @@ export const createIncome = onCall(async (req) => {
       ts: timestamp
     });
 
-  await db.doc(`users/${uid}/metrics`).set({
+  // 5. CORRECCIÓN CLAVE: Apunta al documento /metrics/data
+  await db.doc(`users/${uid}/metrics/data`).set({
     lastIncomeAt: timestamp
   }, { merge: true });
   
@@ -158,8 +167,8 @@ export const createIncome = onCall(async (req) => {
 });
 
 /** =========================
- *  GOALS
- *  ========================= */
+ *  GOALS
+ *  ========================= */
 export const createGoal = onCall(async (req) => {
   const uid = req.auth?.uid; if (!uid) throw new HttpsError("unauthenticated", "User must be logged in.");
   const { name, targetAmount, currency, deadline, priority } = req.data || {};
@@ -196,7 +205,8 @@ async function updateNearestGoalMetrics(uid: string) {
       if (dB < dA) nearest = { id: g.id, pct, deadline };
     }
   }
-  await db.doc(`users/${uid}/metrics`).set({
+  // 6. CORRECCIÓN CLAVE: Apunta al documento /metrics/data
+  await db.doc(`users/${uid}/metrics/data`).set({
     goalNearestId: nearest?.id ?? null,
     goalNearestPct: nearest?.pct ?? 0,
   }, { merge: true });

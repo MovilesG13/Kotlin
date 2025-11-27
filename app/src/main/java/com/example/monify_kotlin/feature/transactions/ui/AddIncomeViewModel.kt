@@ -63,7 +63,7 @@ class AddIncomeViewModel(
                 // Trigger sync when coming back online
                 if (isConnected && wasOffline) {
                     android.util.Log.d("AddIncomeViewModel", "Back online - triggering sync")
-                    TransactionSyncWorker.schedule(getApplication())
+                    TransactionSyncWorker.scheduleImmediate(getApplication())
                 }
                 wasOffline = !isConnected
             }

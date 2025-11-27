@@ -32,15 +32,14 @@ fun SignUpScreen(
     navController: NavController,
     onSignUpSuccess: () -> Unit
 ) {
-    // --- (4) INICIO DE LA CORRECCIÓN ---
-    // Necesitamos el contexto para crear la "fábrica" de AndroidViewModel
+
     val context = LocalContext.current
     val factory = ViewModelProvider.AndroidViewModelFactory.getInstance(
         context.applicationContext as Application
     )
-    // Ahora creamos el ViewModel usando esa fábrica
+
     val vm: LoginViewModel = viewModel(factory = factory)
-    // --- FIN DE LA CORRECCIÓN ---
+
 
     val ui by vm.state.collectAsState()
 
