@@ -31,19 +31,19 @@ class TransactionSyncWorker(
 
             Log.d(TAG, "✅ ========== SYNC COMPLETED ========== Expenses: $expensesSynced, Incomes: $incomesSynced")
 
-            // Enviar broadcast para notificar que la sincronización terminó
+
             sendSyncCompletedBroadcast(expensesSynced + incomesSynced)
 
             Result.success()
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Sync failed: ${e.message}", e)
+            Log.e(TAG, "Sync failed: ${e.message}", e)
             e.printStackTrace()
 
             if (runAttemptCount < 3) {
-                Log.d(TAG, "🔁 Retrying sync... (${runAttemptCount + 1}/3)")
+                Log.d(TAG, "Retrying sync... (${runAttemptCount + 1}/3)")
                 Result.retry()
             } else {
-                Log.e(TAG, "💀 Max retry attempts reached")
+                Log.e(TAG, " Max retry attempts reached")
                 Result.failure()
             }
         }
@@ -51,17 +51,17 @@ class TransactionSyncWorker(
 
     private suspend fun syncPendingExpenses(): Int {
         val pendingExpenses = database.pendingExpenseDao().getUnsyncedExpenses().first()
-        Log.d(TAG, "📤 Found ${pendingExpenses.size} pending expenses to sync")
+        Log.d(TAG, "Found ${pendingExpenses.size} pending expenses to sync")
 
         if (pendingExpenses.isEmpty()) {
-            Log.d(TAG, "✨ No pending expenses to sync")
+            Log.d(TAG, " No pending expenses to sync")
             return 0
         }
 
         var syncedCount = 0
         pendingExpenses.forEach { expense ->
             try {
-                Log.d(TAG, "💳 Syncing expense ID ${expense.id}: ${expense.description} - $${expense.amount}")
+                Log.d(TAG, "Syncing expense ID ${expense.id}: ${expense.description} - $${expense.amount}")
 
                 // Upload image if exists and not uploaded yet
                 var imageUrl = expense.receiptImageUrl

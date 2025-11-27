@@ -12,6 +12,6 @@ val White     = Color(0xFFFFFFFF) // #ffffff  Fondo principal
 val Black     = Color(0xFF000000) // #000000  Texto primario
 
 
-val Purple = Color(0xFFE0BBE4) // #E0BBE4
+val Purple = Color(0xFFA7C7E7) // #E0BBE4
 
 val Orange = Color(0xFFFFCBA4) // #FFCBA4

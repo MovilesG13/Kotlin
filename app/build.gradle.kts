@@ -8,6 +8,8 @@ plugins {
     id("com.google.firebase.crashlytics") version "3.0.6"
 
     id("com.google.devtools.ksp")
+
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.0.21"
 }
 
 android {
@@ -41,6 +43,16 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+        // ¡ESTA LÍNEA ES LA CLAVE!
+        isCoreLibraryDesugaringEnabled = true
+    }
+
+    kotlinOptions {
+        jvmTarget = "1.8"
     }
 }
 
@@ -106,6 +118,11 @@ dependencies {
     implementation("com.google.firebase:firebase-appcheck-debug:17.1.2")
 
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.0")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+
+    coreLibraryDesugaring(libs.android.desugar.jdk.libs)
 }
+
 
 
