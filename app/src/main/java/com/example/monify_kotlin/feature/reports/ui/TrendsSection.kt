@@ -48,7 +48,7 @@ fun TrendsSection(
                     }
                 } else if (state.chartData.isEmpty() || state.totalSpentWeek == 0.0) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No expenses registered last 6 months", color = Gray)
+                        Text("No expenses registered last 6 months", color = DarkTextSec)
                     }
                 } else {
                     // INTEGRACIÓN MPANDROIDCHART

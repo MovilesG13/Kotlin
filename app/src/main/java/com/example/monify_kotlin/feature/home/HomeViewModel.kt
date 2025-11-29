@@ -18,6 +18,7 @@ import com.example.monify_kotlin.data.cache.PendingExpense
 import com.example.monify_kotlin.data.cache.PendingIncome
 import com.example.monify_kotlin.data.cache.SyncedTransaction
 import com.example.monify_kotlin.core.util.ConnectivityObserver
+import com.example.monify_kotlin.data.UserPreferencesRepository
 import com.example.monify_kotlin.data.sync.TransactionSyncWorker
 
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -54,6 +55,8 @@ class HomeViewModel(
 
     private val repo: HomeRepository = HomeRepository()
     private val goalsRepo: GoalsRepository = GoalsRepository()
+
+    private val userPrefs = UserPreferencesRepository(application)
 
     private val database = AppDatabase.getDatabase(application)
     private val connectivityObserver = ConnectivityObserver(application)
@@ -131,11 +134,13 @@ class HomeViewModel(
      */
     @RequiresApi(Build.VERSION_CODES.O)
     private fun loadReactiveData() {
-        android.util.Log.d("HomeViewModel", "🚀 Starting reactive data loading")
+        android.util.Log.d("HomeViewModel", " Starting reactive data loading")
 
         val syncedFlow = database.syncedTransactionDao().getAllTransactions()
         val pendingExpensesFlow = database.pendingExpenseDao().getUnsyncedExpenses()
         val pendingIncomesFlow = database.pendingIncomeDao().getUnsyncedIncomes()
+
+        val nameFlow = userPrefs.userName
 
         viewModelScope.launch {
             try {
@@ -149,20 +154,20 @@ class HomeViewModel(
                 android.util.Log.d("HomeViewModel", "💰 Initial balance: $bal (Income: $inc, Expenses: $exp)")
 
 
-                combine(syncedFlow, pendingExpensesFlow, pendingIncomesFlow) { synced, pendingExp, pendingInc ->
+                combine(syncedFlow, pendingExpensesFlow, pendingIncomesFlow, nameFlow) { synced, pendingExp, pendingInc, userName ->
                     val allTransactions = mutableListOf<TransactionUiModel>()
                     allTransactions.addAll(synced.map { it.toUiModel() })
                     allTransactions.addAll(pendingExp.map { it.toUiModel() })
                     allTransactions.addAll(pendingInc.map { it.toUiModel() })
 
-                    android.util.Log.d("HomeViewModel", "📊 Transactions updated - Synced: ${synced.size}, Pending Expenses: ${pendingExp.size}, Pending Incomes: ${pendingInc.size}")
+                    android.util.Log.d("HomeViewModel", "Transactions updated - Synced: ${synced.size}, Pending Expenses: ${pendingExp.size}, Pending Incomes: ${pendingInc.size}")
 
                     val weeklyTxns = groupTransactionsByWeek(allTransactions)
                     val hasPending = pendingExp.isNotEmpty() || pendingInc.isNotEmpty()
 
                     _state.value.copy(
                         loading = false,
-                        name = name,
+                        name = userName,
                         monthLabel = today.month.name.lowercase().replaceFirstChar { it.titlecase() },
                         income = inc,
                         expenses = exp,

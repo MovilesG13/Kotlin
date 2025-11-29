@@ -70,7 +70,7 @@ fun CategoriesSection(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("📊", fontSize = 48.sp)
                             Spacer(Modifier.height(8.dp))
-                            Text(text = "No hay gastos registrados este mes", color = Gray)
+                            Text(text = "No hay gastos registrados este mes", color = DarkTextSec)
                         }
                     }
                 }
@@ -121,7 +121,7 @@ private fun SummaryCard(totalIncome: Double, totalExpenses: Double) {
                 modifier = Modifier
                     .width(1.dp)
                     .height(50.dp),
-                color = Gray.copy(alpha = 0.3f)
+                color = DarkTextSec.copy(alpha = 0.3f)
             )
 
             Column(
@@ -141,7 +141,7 @@ private fun SummaryCard(totalIncome: Double, totalExpenses: Double) {
                 modifier = Modifier
                     .width(1.dp)
                     .height(50.dp),
-                color = Gray.copy(alpha = 0.3f)
+                color = DarkTextSec.copy(alpha = 0.3f)
             )
 
             Column(

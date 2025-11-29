@@ -15,7 +15,7 @@ fun BottomBar(currentRoute: String?, onNavigate: (String) -> Unit) {
         BottomItem(Routes.HOME,    "Inicio",   Icons.Filled.Home,      true),
         BottomItem(Routes.SAVINGS, "Ahorros",  Icons.Filled.AccountBalance, true),
         BottomItem(Routes.REPORTS, "Reportes", Icons.Filled.Assessment, true),
-        BottomItem("profile",      "Perfil",   Icons.Filled.Person,    false),
+        BottomItem("profile",      "Perfil",   Icons.Filled.Person,    true),
     )
     NavigationBar {
         items.forEach { it ->

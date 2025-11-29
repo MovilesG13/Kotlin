@@ -300,7 +300,7 @@ fun AddExpenseScreen(
                                         .fillMaxWidth()
                                         .height(200.dp)
                                         .clip(RoundedCornerShape(12.dp))
-                                        .border(1.dp, Gray, RoundedCornerShape(12.dp))
+                                        .border(1.dp, LightBlue, RoundedCornerShape(12.dp))
                                 ) {
                                     AsyncImage(
                                         model = uiState.receiptImageUri,

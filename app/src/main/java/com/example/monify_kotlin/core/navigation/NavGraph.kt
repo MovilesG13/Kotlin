@@ -15,6 +15,7 @@ import android.os.Build
 import androidx.compose.material3.Text
 import androidx.annotation.RequiresApi
 import com.example.monify_kotlin.feature.home.HomeScreen
+import com.example.monify_kotlin.feature.profile.ui.ProfileScreen
 
 object Routes {
     const val MAIN_LOGIN = "main_login"
@@ -71,6 +72,18 @@ fun AppNavGraph(
                 onAddIncome = { navController.navigate(Routes.ADD_INCOME) },
                 onAddExpense = { navController.navigate(Routes.ADD_EXPENSE) },
                 onGoReports = { navController.navigate(Routes.REPORTS) }
+            )
+        }
+
+        // ProfileScreen
+        composable("profile") {
+            ProfileScreen(
+                onNavigate = { route ->
+                    navController.navigate(route) {
+                        popUpTo(Routes.HOME) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
             )
         }
 

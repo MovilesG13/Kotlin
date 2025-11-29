@@ -189,7 +189,7 @@ private fun SavingsHeader(totalSaved: Float, totalTarget: Float, onAddGoal: () -
             // Tarjeta “Total Progress”
             Surface(
                 shape = RoundedCornerShape(18.dp),
-                color = SkyBlue.copy(alpha = 0.6f),
+                color = LightBlue.copy(alpha = 0.6f),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(Modifier.padding(14.dp)) {
@@ -265,7 +265,7 @@ private fun SavingsTabs(selected: SavingsTab, onSelect: (SavingsTab) -> Unit) {
 private fun TabPill(text: String, selected: Boolean, onClick: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(18.dp),
-        color = if (selected) White else Gray.copy(alpha = 0.35f),
+        color = if (selected) White else TextGray.copy(alpha = 0.35f),
         shadowElevation = if (selected) 2.dp else 0.dp,
         onClick = onClick
     ) {
@@ -363,7 +363,7 @@ private fun DonutChart(saved: Float, target: Float, modifier: Modifier = Modifie
             val stroke = 24f
             // fondo gris
             drawArc(
-                color = Gray.copy(alpha = 0.6f),
+                color = TextGray.copy(alpha = 0.6f),
                 startAngle = 0f,
                 sweepAngle = 360f,
                 useCenter = false,
@@ -444,7 +444,7 @@ private fun GoalCard(goal: SavingGoal) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Button(
                     onClick = { /* add money */ },
-                    colors = ButtonDefaults.buttonColors(containerColor = SkyBlue),
+                    colors = ButtonDefaults.buttonColors(containerColor = LightBlue),
                     modifier = Modifier.weight(1f)
                 ) { Text("+  Add Money", color = Blue) }
 

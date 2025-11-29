@@ -11,27 +11,6 @@ class MonifyApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        // 1. Initialize Firebase
         FirebaseApp.initializeApp(this)
-
-        // 2. Initialize App Check
-        /*
-        val firebaseAppCheck = FirebaseAppCheck.getInstance()
-
-        // 3. (ESTE ES EL CAMBIO)
-        // Instala el proveedor de DEPURACIÓN si estás en un build de debug,
-        // de lo contrario, instala Play Integrity para release.
-        if (BuildConfig.DEBUG) {
-            // MODO DEBUG
-            firebaseAppCheck.installAppCheckProviderFactory(
-                DebugAppCheckProviderFactory.getInstance()
-            )
-        } else {
-            // MODO RELEASE (producción)
-            firebaseAppCheck.installAppCheckProviderFactory(
-                PlayIntegrityAppCheckProviderFactory.getInstance()
-            )
-        }
-         */
     }
 }

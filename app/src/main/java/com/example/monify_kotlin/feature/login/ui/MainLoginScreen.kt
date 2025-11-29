@@ -13,7 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.monify_kotlin.R // Asegúrate de que R se importe correctamente
-import com.example.monify_kotlin.ui.theme.SkyBlue // Asumo que tienes este color definido
+import com.example.monify_kotlin.ui.theme.BrandSkyBlue // Asumo que tienes este color definido
 import com.example.monify_kotlin.ui.theme.LightBlue // Asumo que tienes este color definido
 import androidx.compose.foundation.shape.RoundedCornerShape
 
@@ -25,7 +25,7 @@ fun MainLoginScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(SkyBlue)
+            .background(BrandSkyBlue)
             .padding(16.dp),
         contentAlignment = Alignment.Center
     ) {

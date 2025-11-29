@@ -220,7 +220,7 @@ class ReportsViewModel(
         "bills" -> Green
         "shopping" -> LightBlue
         "health" -> Color(0xFFFF9800)
-        else -> Gray
+        else -> DarkTextSec
     }
 
     fun selectMonth(month: String) {
