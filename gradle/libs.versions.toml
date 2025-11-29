@@ -22,6 +22,7 @@ room = "2.6.1"
 ksp = "2.0.21-1.0.27"
 media3CommonKtx = "1.8.0"
 runtimeVersion = "1.9.5"
+foundationVersion = "1.9.5"
 
 [libraries]
 
@@ -67,6 +68,7 @@ navigation-compose = { group = "androidx.navigation", name = "navigation-compose
 androidx-runtime = { group = "androidx.compose.runtime", name = "runtime", version.ref = "runtime" }
 androidx-media3-common-ktx = { group = "androidx.media3", name = "media3-common-ktx", version.ref = "media3CommonKtx" }
 runtime = { group = "androidx.compose.runtime", name = "runtime", version.ref = "runtimeVersion" }
+foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundationVersion" }
 
 
 [plugins]

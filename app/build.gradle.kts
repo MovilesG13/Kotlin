@@ -80,6 +80,7 @@ dependencies {
     implementation(libs.navigation.compose)
     implementation(libs.androidx.runtime)
     implementation(libs.runtime)
+    implementation(libs.foundation)
 
     // Room
 

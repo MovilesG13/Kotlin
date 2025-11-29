@@ -1,34 +1,26 @@
 package com.example.monify_kotlin.feature.reports.ui
 
-import androidx.compose.foundation.Canvas
+import android.os.Bundle // <--- IMPORTANTE
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.monify_kotlin.core.ui.BottomBar
 import com.example.monify_kotlin.core.util.ConnectivityObserver
 import com.example.monify_kotlin.data.ExpenseRepository
@@ -36,6 +28,19 @@ import com.example.monify_kotlin.data.cache.AppDatabase
 import com.example.monify_kotlin.feature.reports.CategoryData
 import com.example.monify_kotlin.feature.reports.ReportsViewModel
 import com.example.monify_kotlin.ui.theme.*
+import com.google.firebase.analytics.FirebaseAnalytics
+import androidx.compose.foundation.Canvas
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+
 
 @Composable
 fun ReportsScreen(
@@ -43,6 +48,9 @@ fun ReportsScreen(
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
+
+    // 1. Instancia de Analytics (Usamos la estándar de Firebase)
+    val firebaseAnalytics = remember { FirebaseAnalytics.getInstance(context) }
 
     val viewModel: ReportsViewModel = viewModel(
         factory = object : ViewModelProvider.Factory {
@@ -57,129 +65,82 @@ fun ReportsScreen(
 
     val uiState = viewModel.uiState
     val trendsState = viewModel.trendsUiState
-
-    // 1. Connectivity Observer
     val connectivityObserver = remember { ConnectivityObserver(context) }
     val isConnected by connectivityObserver.isConnected.collectAsState(initial = true)
 
-    // 2. Estado de los Tabs
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Categories", "Tendencys")
+    val tabs = listOf("Categories", "Trends")
+
+    // Efecto para recargar datos al volver online
+    LaunchedEffect(isConnected) {
+        if (isConnected) viewModel.refreshData()
+    }
+
+    // Efecto para registrar la vista inicial (Por defecto entra a Categories)
+    LaunchedEffect(Unit) {
+        logTabSelection(firebaseAnalytics, "Categories")
+    }
 
     Scaffold(
         containerColor = White,
-        bottomBar = {
-            BottomBar("reports") { route -> onNavigate(route) }
-        }
+        bottomBar = { BottomBar("reports") { route -> onNavigate(route) } }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(scrollState)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(16.dp)
         ) {
-            // Header
             ReportsHeader()
 
-            // BANNER OFFLINE
             if (!isConnected) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Red)
+                        .padding(vertical = 8.dp)
+                        .background(Red.copy(alpha = 0.9f), RoundedCornerShape(4.dp))
                         .padding(8.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Modo Offline: Mostrando datos en caché", color = White, fontSize = 12.sp)
-                }
-            }
-
-            // Tab Row
-            TabRow(selectedTabIndex = selectedTab) {
-                tabs.forEachIndexed { index, title ->
-                    Tab(
-                        selected = selectedTab == index,
-                        onClick = {
-                            selectedTab = index
-                        },
-                        text = { Text(title) }
-                    )
+                    Text("Offline Mode: Showing cached data", color = White, fontSize = 12.sp)
                 }
             }
 
             Spacer(Modifier.height(16.dp))
 
-            // CONTENIDO DE PESTAÑAS (Ahora limpio y sin duplicados)
+            // TAB ROW CON ANALYTICS
+            TabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = White,
+                contentColor = Blue,
+                indicator = { tabPositions ->
+                    TabRowDefaults.Indicator(
+                        modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                        color = Blue
+                    )
+                }
+            ) {
+                tabs.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTab == index,
+                        onClick = {
+                            if (selectedTab != index) { // Solo si cambia de pestaña
+                                selectedTab = index
+                                // 2. LOGUEAR EL EVENTO AQUI
+                                logTabSelection(firebaseAnalytics, title)
+                            }
+                        },
+                        text = { Text(title, style = MaterialTheme.typography.labelLarge) }
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+
             when (selectedTab) {
-                0 -> {
-                    // --- PESTAÑA 1: CATEGORÍAS ---
-
-                    // 1. Tarjeta Resumen
-                    SummaryCard(uiState.totalIncome, uiState.totalExpenses)
-
-                    Spacer(Modifier.height(16.dp))
-
-                    // 2. Lógica de Carga / Error / Gráfico
-                    when {
-                        uiState.isLoading -> {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(300.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator(color = Blue)
-                            }
-                        }
-                        uiState.error != null -> {
-                            Card(
-                                shape = RoundedCornerShape(16.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Box(
-                                    modifier = Modifier.padding(32.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(text = uiState.error!!, color = Red)
-                                }
-                            }
-                        }
-                        uiState.categories.isEmpty() -> {
-                            Card(
-                                shape = RoundedCornerShape(16.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Box(
-                                    modifier = Modifier.padding(32.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text("📊", fontSize = 48.sp)
-                                        Spacer(Modifier.height(8.dp))
-                                        Text(text = "No expenses registered this month", color = Gray)
-                                    }
-                                }
-                            }
-                        }
-                        else -> {
-                            ExpenseDistributionCard(uiState.categories)
-                        }
-                    }
-
-                    Spacer(Modifier.height(16.dp))
-
-                    // 3. Lista de Categorías
-                    if (uiState.categories.isNotEmpty()) {
-                        CategoryListCard(uiState.categories)
-                    }
-                }
-
-                1 -> {
-                    // --- PESTAÑA 2: TENDENCIAS ---
-                    TrendsSection(trendsState)
-                }
+                0 -> CategoriesSection(uiState = uiState)
+                1 -> TrendsSection(state = trendsState)
             }
 
             Spacer(Modifier.height(16.dp))
@@ -187,10 +148,21 @@ fun ReportsScreen(
     }
 }
 
-// --- Componentes Privados
+// --- HELPER FUNCTION PARA ANALYTICS ---
+// Usamos el evento estándar SELECT_CONTENT que Firebase ama
+private fun logTabSelection(analytics: FirebaseAnalytics, tabName: String) {
+    val bundle = Bundle().apply {
+        putString(FirebaseAnalytics.Param.ITEM_ID, "tab_${tabName.lowercase()}")
+        putString(FirebaseAnalytics.Param.ITEM_NAME, tabName)
+        putString(FirebaseAnalytics.Param.CONTENT_TYPE, "report_section")
+    }
+    analytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle)
+}
 
+// ... (El resto de tus componentes ReportsHeader, etc. siguen igual abajo)
 @Composable
 private fun ReportsHeader() {
+    // ... (Tu código existente del header) ...
     Card(
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = LightBlue),
@@ -216,85 +188,14 @@ private fun ReportsHeader() {
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    text = "Expense Reports",
+                    text = "Financial Reports",
                     style = MaterialTheme.typography.titleMedium,
                     color = Blue
                 )
                 Text(
-                    text = "View your spending distribution",
+                    text = "Overview of your income and expenses",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Black
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SummaryCard(totalIncome: Double, totalExpenses: Double) {
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("Income", style = MaterialTheme.typography.bodySmall, color = LightBlue)
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    totalIncome.formatMoney(),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = Green
-                )
-            }
-
-            Divider(
-                modifier = Modifier
-                    .width(1.dp)
-                    .height(50.dp),
-                color = Gray.copy(alpha = 0.3f)
-            )
-
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("Expenses", style = MaterialTheme.typography.bodySmall, color = LightBlue)
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    totalExpenses.formatMoney(),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = Red
-                )
-            }
-
-            Divider(
-                modifier = Modifier
-                    .width(1.dp)
-                    .height(50.dp),
-                color = Gray.copy(alpha = 0.3f)
-            )
-
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("Balance", style = MaterialTheme.typography.bodySmall, color = LightBlue)
-                Spacer(Modifier.height(4.dp))
-                val balance = totalIncome - totalExpenses
-                Text(
-                    balance.formatMoney(),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = if (balance >= 0) Blue else Red
                 )
             }
         }
