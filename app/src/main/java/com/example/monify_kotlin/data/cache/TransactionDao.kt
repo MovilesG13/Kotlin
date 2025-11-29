@@ -17,6 +17,9 @@ interface PendingExpenseDao {
     @Query("UPDATE pending_expenses SET syncAttempts = syncAttempts + 1, lastSyncAttempt = :timestamp WHERE id = :id")
     suspend fun incrementSyncAttempts(id: Long, timestamp: Long)
 
+    @Query("SELECT * FROM pending_expenses")
+    fun getAllPendingExpenses(): Flow<List<PendingExpense>>
+
     @Delete
     suspend fun delete(expense: PendingExpense)
 }

@@ -670,28 +670,6 @@ private fun EmptyTransactionsView(
                 color = Color.Gray.copy(alpha = 0.7f)
             )
             Spacer(Modifier.height(24.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(
-                    onClick = onAddExpense,
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Red
-                    )
-                ) {
-                    Icon(Icons.Filled.TrendingDown, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("Add Expense")
-                }
-                Button(
-                    onClick = onAddIncome,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Green
-                    )
-                ) {
-                    Icon(Icons.Filled.TrendingUp, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("Add Income")
-                }
-            }
         }
     }
 }

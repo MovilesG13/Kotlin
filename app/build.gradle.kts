@@ -79,6 +79,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.navigation.compose)
     implementation(libs.androidx.runtime)
+    implementation(libs.runtime)
 
     // Room
 
@@ -122,6 +123,10 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
     coreLibraryDesugaring(libs.android.desugar.jdk.libs)
+
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+
+
 }
 
 

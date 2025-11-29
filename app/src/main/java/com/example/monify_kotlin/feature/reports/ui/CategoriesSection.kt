@@ -1,235 +1,95 @@
 package com.example.monify_kotlin.feature.reports.ui
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.monify_kotlin.feature.reports.CategoryData
+import com.example.monify_kotlin.feature.reports.ReportsUiState
+import com.example.monify_kotlin.ui.theme.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.ViewModelProvider
-import com.example.monify_kotlin.core.ui.BottomBar
-import com.example.monify_kotlin.core.util.ConnectivityObserver
-import com.example.monify_kotlin.data.ExpenseRepository
-import com.example.monify_kotlin.data.cache.AppDatabase
-import com.example.monify_kotlin.feature.reports.CategoryData
-import com.example.monify_kotlin.feature.reports.ReportsViewModel
-import com.example.monify_kotlin.ui.theme.*
+
+
 
 @Composable
-fun ReportsScreen(
-    onNavigate: (String) -> Unit,
+fun CategoriesSection(
+    uiState: ReportsUiState
 ) {
-    val context = LocalContext.current
-    val scrollState = rememberScrollState()
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Summary Card
+        SummaryCard(
+            totalIncome = uiState.totalIncome,
+            totalExpenses = uiState.totalExpenses
+        )
 
-    val viewModel: ReportsViewModel = viewModel(
-        factory = object : ViewModelProvider.Factory {
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return ReportsViewModel(
-                    repository = ExpenseRepository(),
-                    database = AppDatabase.getDatabase(context)
-                ) as T
-            }
-        }
-    )
-
-    val uiState = viewModel.uiState
-    val trendsState = viewModel.trendsUiState
-
-    // 1. Connectivity Observer
-    val connectivityObserver = remember { ConnectivityObserver(context) }
-    val isConnected by connectivityObserver.isConnected.collectAsState(initial = true)
-
-    // 2. Estado de los Tabs
-    var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Categories", "Tendencys")
-
-    Scaffold(
-        containerColor = White,
-        bottomBar = {
-            BottomBar("reports") { route -> onNavigate(route) }
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(scrollState)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Header
-            ReportsHeader()
-
-            // BANNER OFFLINE
-            if (!isConnected) {
+        // Chart Card & Loading Logic
+        when {
+            uiState.isLoading -> {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Red)
-                        .padding(8.dp),
+                    modifier = Modifier.fillMaxWidth().height(300.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Modo Offline: Mostrando datos en caché", color = White, fontSize = 12.sp)
+                    CircularProgressIndicator(color = Blue)
                 }
             }
-
-            // Tab Row
-            TabRow(selectedTabIndex = selectedTab) {
-                tabs.forEachIndexed { index, title ->
-                    Tab(
-                        selected = selectedTab == index,
-                        onClick = {
-                            selectedTab = index
-                        },
-                        text = { Text(title) }
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            // CONTENIDO DE PESTAÑAS (Ahora limpio y sin duplicados)
-            when (selectedTab) {
-                0 -> {
-                    // --- PESTAÑA 1: CATEGORÍAS ---
-
-                    // 1. Tarjeta Resumen
-                    SummaryCard(uiState.totalIncome, uiState.totalExpenses)
-
-                    Spacer(Modifier.height(16.dp))
-
-                    // 2. Lógica de Carga / Error / Gráfico
-                    when {
-                        uiState.isLoading -> {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(300.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator(color = Blue)
-                            }
-                        }
-                        uiState.error != null -> {
-                            Card(
-                                shape = RoundedCornerShape(16.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Box(
-                                    modifier = Modifier.padding(32.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(text = uiState.error!!, color = Red)
-                                }
-                            }
-                        }
-                        uiState.categories.isEmpty() -> {
-                            Card(
-                                shape = RoundedCornerShape(16.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Box(
-                                    modifier = Modifier.padding(32.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text("📊", fontSize = 48.sp)
-                                        Spacer(Modifier.height(8.dp))
-                                        Text(text = "No expenses registered this month", color = Gray)
-                                    }
-                                }
-                            }
-                        }
-                        else -> {
-                            ExpenseDistributionCard(uiState.categories)
-                        }
-                    }
-
-                    Spacer(Modifier.height(16.dp))
-
-                    // 3. Lista de Categorías
-                    if (uiState.categories.isNotEmpty()) {
-                        CategoryListCard(uiState.categories)
+            uiState.error != null -> {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = White)
+                ) {
+                    Box(modifier = Modifier.padding(32.dp), contentAlignment = Alignment.Center) {
+                        Text(text = uiState.error!!, color = Red)
                     }
                 }
-
-                1 -> {
-                    // --- PESTAÑA 2: TENDENCIAS ---
-                    TrendsSection(trendsState)
+            }
+            uiState.categories.isEmpty() -> {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = White)
+                ) {
+                    Box(
+                        modifier = Modifier.padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("📊", fontSize = 48.sp)
+                            Spacer(Modifier.height(8.dp))
+                            Text(text = "No hay gastos registrados este mes", color = Gray)
+                        }
+                    }
                 }
             }
+            else -> {
+                ExpenseDistributionCard(categories = uiState.categories)
+            }
+        }
 
-            Spacer(Modifier.height(16.dp))
+        // Category List
+        if (uiState.categories.isNotEmpty()) {
+            CategoryListCard(categories = uiState.categories)
         }
     }
 }
 
-// --- Componentes Privados
-
-@Composable
-private fun ReportsHeader() {
-    Card(
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = LightBlue),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .clip(CircleShape)
-                    .background(Blue.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Assessment,
-                    contentDescription = null,
-                    tint = Blue
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = "Expense Reports",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Blue
-                )
-                Text(
-                    text = "View your spending distribution",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Black
-                )
-            }
-        }
-    }
-}
-
+// ---> PEGA AQUÍ AL FINAL LAS FUNCIONES PRIVADAS QUE TENÍAS EN ReportsScreen.kt <---
+// SummaryCard, ExpenseDistributionCard, LegendItem, PieChart, CategoryListCard, CategoryRow, formatMoney
+// Si no las pegas aquí, CategoriesSection no compilará.
 @Composable
 private fun SummaryCard(totalIncome: Double, totalExpenses: Double) {
     Card(
@@ -477,8 +337,9 @@ private fun CategoryRow(category: CategoryData) {
             }
         }
 
+        // Barra de progreso (Material3: determinista con lambda)
         LinearProgressIndicator(
-            progress = { category.percentage },
+            progress = { category.percentage }, // 0f..1f
             modifier = Modifier
                 .fillMaxWidth()
                 .height(8.dp)
