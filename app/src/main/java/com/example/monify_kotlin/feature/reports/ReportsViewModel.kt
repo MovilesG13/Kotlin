@@ -153,16 +153,20 @@ class ReportsViewModel(
         val pendingExpenses = database.pendingExpenseDao().getUnsyncedExpenses().firstOrNull() ?: emptyList()
         val selectedMonthDate = YearMonth.parse(monthStr)
 
-        val pendingInMonth = pendingExpenses.filter {
-            val date = parseDateSafe(it.date)
-            YearMonth.from(date) == selectedMonthDate
-        }
+        // MICRO-OPTIMIZACIÓN 1: .asSequence()
+        // Evita crear una lista temporal para el filtro, evalúa uno por uno.
+        val pendingInMonth = pendingExpenses
+            .asSequence()
+            .filter {
+                val date = parseDateSafe(it.date)
+                YearMonth.from(date) == selectedMonthDate
+            }
+            .toList()
 
         // 3. Merge
         val cloudTotal = (cloudSummary["totalExpenses"] as? Number)?.toDouble() ?: 0.0
         val pendingTotal = pendingInMonth.sumOf { it.amount }
         val finalTotal = cloudTotal + pendingTotal
-
         val cloudIncome = (cloudSummary["totalIncome"] as? Number)?.toDouble() ?: 0.0
 
         // Categories (Only needed for tab 1, but calculated here for consistency)
@@ -173,14 +177,19 @@ class ReportsViewModel(
         cloudCats.forEach { mergedCats[it["categoryId"] as String] = (it["total"] as Number).toDouble() }
         pendingInMonth.forEach { mergedCats[it.categoryId] = (mergedCats[it.categoryId] ?: 0.0) + it.amount }
 
-        val catList = mergedCats.map { (id, amount) ->
+        // MICRO-OPTIMIZACION
+        val catList = mergedCats.entries
+            .asSequence()
+            .map { (id, amount) ->
             CategoryData(
                 name = mapCategoryName(id),
                 amount = amount,
                 color = mapCategoryColor(id),
                 percentage = if (finalTotal > 0) (amount / finalTotal).toFloat() else 0f
-            )
-        }.sortedByDescending { it.amount }
+                )
+            }
+            .sortedByDescending { it.amount }
+            .toList()
 
         return MonthData(finalTotal, cloudIncome, catList)
     }
